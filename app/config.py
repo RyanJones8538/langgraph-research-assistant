@@ -1,6 +1,7 @@
 from langchain_openai import ChatOpenAI
 
-llm = ChatOpenAI(
-    model="gpt-4o",
-    temperature=0
-)
+def get_llm() -> ChatOpenAI:
+    return ChatOpenAI(
+        model="gpt-4o",
+        temperature=0,
+    )

@@ -2,6 +2,7 @@ from langgraph.types import interrupt
 
 def make_generate_outline(llm):
     def generate_outline(state):
+        model = llm()
         #topic = state["topic"]
         topic = "Cats"
         messages = state.get("request_messages", [])
@@ -25,7 +26,7 @@ def make_generate_outline(llm):
                 If feedback exists, revise the outline accordingly.
                 Otherwise, generate a fresh outline.
                 """
-        new_outline = llm.invoke(prompt).content
+        new_outline = model.invoke(prompt).content
 
         print(new_outline)
         review_comment = interrupt("Do you approve of this outline?")
@@ -41,6 +42,7 @@ def make_generate_outline(llm):
 
 def make_parse_review(llm):
     def parse_review(state):
+        model = llm()
         review_comment = state.get("review_comment")
 
         prompt = f"""
@@ -52,7 +54,7 @@ def make_parse_review(llm):
                 3. Revise the outline (respond with 'revise')
                 If the review comment is unclear or doesn't fit any of the above categories, respond with 'invalid_review'.
                 """
-        review_action = llm.invoke(prompt).content
+        review_action = model.invoke(prompt).content
 
         return {
             "review_action": review_action

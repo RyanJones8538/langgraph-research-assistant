@@ -1,11 +1,7 @@
 from app.nodes.outline import make_generate_outline, make_parse_review
-from IPython.display import Image, display
-from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.graph import END, MessagesState, START, StateGraph
-from langgraph.prebuilt import tools_condition, ToolNode
-from app.config import llm
-from pydantic import BaseModel, Field
-from typing import List, TypedDict
+from langgraph.graph import END, START, StateGraph
+from app.config import get_llm
+from typing import TypedDict
 
 class ResearchState(TypedDict):
     request_id: str
@@ -38,8 +34,8 @@ def build_graph():
     builder = StateGraph(ResearchState)
 
     # Generate Graph Nodes
-    builder.add_node("generate_outline", make_generate_outline(llm))
-    builder.add_node("parse_review", make_parse_review(llm))
+    builder.add_node("generate_outline", make_generate_outline(get_llm))
+    builder.add_node("parse_review", make_parse_review(get_llm))
     builder.add_node("route_review", route_review)
     builder.add_node("handle_invalid_review", handle_invalid_review)
 
