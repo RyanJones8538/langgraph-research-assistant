@@ -3,6 +3,7 @@ name = "langgraph-research-assistant"
 version = "0.1.0"
 dependencies = [
   "langgraph",
+  "langgraph-cli[inmem]",
   "langchain",
   "langchain-openai",
   "openai",

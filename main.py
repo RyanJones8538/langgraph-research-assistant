@@ -1,18 +1,21 @@
 from dotenv import load_dotenv
 
-from app.graph.builder import build_graph, ResearchState
+from app.graph.builder import build_graph, OutlineState
 from uuid import uuid4
+
+from app.models.classes import OutlineContent
 
 load_dotenv()
 
 graph = build_graph()
 
 def run(topic: str):
-    initial_state: ResearchState = {
+    initial_state: OutlineState = {
         "request_id": str(uuid4()),
         "topic": topic,
         "request_messages": [topic],
         "current_outline": "",
+        "outline_object": OutlineContent(outline_formatted=[]),
         "outline_history": [],
         "review_action": None,
         "review_comment": None,
