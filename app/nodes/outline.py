@@ -39,6 +39,7 @@ def make_generate_outline(llm):
                 Return:
                 outline_formatted as a structured list of sections and subsections for downstream processing.
                 Make sure the content of the outline is identical in both outline_text and outline_formatted, just in different formats.
+                For debugging purposes, limit your outline to 3 sections, each with no more than 2 subsections.
                 """
         new_outline = model.invoke(prompt)
         outline_text = render_outline(new_outline.outline_formatted)

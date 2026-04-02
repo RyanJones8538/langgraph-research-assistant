@@ -31,6 +31,6 @@ def make_questions(model, topic, section):
             If questions already exist for a section, revise them based on the approved outline and user messages.
             Return the questions in a structured format, organized by section.
             section_title should be the title of the section, and questions should be a list of focused research questions for that section.
-            Questions should be pulled from both the title of the section and its subsections.
+            For debugging purposes, limit yourself to generating no more than 3 questions per section.
             """
     return model.invoke(prompt)

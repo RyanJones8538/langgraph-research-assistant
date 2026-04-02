@@ -3,7 +3,7 @@ from app.models.classes import OutlineContent
 from app.nodes.outline import make_generate_outline, make_parse_review
 from langgraph.graph import END, START, StateGraph
 from app.config import get_llm, outline_llm
-from typing import TypedDict
+from typing_extensions import TypedDict
 
 class OutlineState(TypedDict):
     request_id: str

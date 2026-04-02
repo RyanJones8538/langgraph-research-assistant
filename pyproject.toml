@@ -6,6 +6,7 @@ dependencies = [
   "langgraph-cli[inmem]",
   "langchain",
   "langchain-openai",
+  "langchain-tavily",
   "openai",
   "python-dotenv"
 ]

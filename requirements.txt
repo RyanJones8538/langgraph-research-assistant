@@ -2,5 +2,6 @@ langgraph
 langgraph-cli[inmem]
 langchain
 langchain-openai
+langchain-tavily
 python-dotenv
 openai

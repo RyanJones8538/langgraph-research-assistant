@@ -2,7 +2,7 @@ from app.models.classes import OutlineContent, SectionResearch, SourceItem
 from app.nodes.question_generator import make_generate_questions
 from app.nodes.search_sources import make_search_sources
 from langgraph.graph import END, START, StateGraph
-from app.config import source_llm, question_llm
+from app.config import question_llm
 from typing_extensions import TypedDict
 
 class ResearchState(TypedDict):
@@ -18,7 +18,7 @@ def build_research_graph():
 
     # Generate Graph Nodes
     builder.add_node("generate_questions", make_generate_questions(question_llm))
-    builder.add_node("search_sources", make_search_sources(source_llm))
+    builder.add_node("search_sources", make_search_sources())
 
     # Generate Graph Edges
     builder.add_edge(START, "generate_questions")

@@ -1,33 +1,37 @@
-from app.models.classes import SectionResearch
+from langchain_tavily import TavilySearch
 
-def make_search_sources(llm):
+def make_search_sources():
+    search = TavilySearch(max_results=5)
+
     def search_sources(state):
-        model = llm()
         section_questions = state["section_questions"]
-        topic = state["topic"]
-        new_sources: dict[str, SectionResearch] = {}
+        new_sources = {}
 
-        for section in section_questions:
-            all_questions = section_questions[section]
-            prompt = f"""
-                    You are generating research sources based on questions for sections of an approved outline about {topic}.
+        for section, questions in section_questions.items():
+            sources_by_question = {}
+            all_sources = []
 
-                    Approved Outline Section:
-                    {section}
+            for question in questions:
+                results = search.invoke(question)
+                sources_by_question[question] = results["results"]
+                all_sources.extend(results["results"])
+            
+            seen_urls = set()
+            deduped_sources = []
 
-                    Approved Outline Section Questions:
-                    {section_questions[section]}
+            for source in all_sources:
+                url = source["url"]
+                if url not in seen_urls:
+                    seen_urls.add(url)
+                    deduped_sources.append(source)
 
-                    Generate a list of research questions for each section of the outline. 
-                    If questions already exist for a section, revise them based on the approved outline and user messages.
-                    Return the questions in a structured format, organized by section.
-                    section_title should be the title of the section, and questions should be a list of focused research questions for that section.
-                    Questions should be pulled from both the title of the section and its subsections.
-                    """
-            section_questions = model.invoke(prompt)
-            #new_questions[section_questions.section_title] = section_questions.questions
+            all_sources = deduped_sources
 
-        return {
-            #"section_questions": new_questions,
-        }
+            new_sources[section] = {
+                "questions": questions,
+                "sources_by_question": sources_by_question,
+                "all_sources": all_sources,
+            }
+        return {"candidate_sources": new_sources}
+
     return search_sources

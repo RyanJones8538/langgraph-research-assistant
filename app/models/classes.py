@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import TypedDict
+from typing_extensions import TypedDict
 
 
 class OutlineSection(BaseModel):
@@ -16,7 +16,7 @@ class SectionQuestions(BaseModel):
 class SourceItem(TypedDict):
     title: str
     url: str
-    snippet: str
+    content: str
 
 class SectionResearch(TypedDict):
     questions: list[str]
