@@ -10,6 +10,7 @@ class ResearchState(TypedDict):
     outline_object: OutlineContent
     section_questions: dict[str, list[str]]
     candidate_sources: dict[str, SectionResearch]
+    validated_sources: dict[str, SectionResearch]
     evidence_by_section: dict[str, list[str]]
     coverage_gaps: dict[str, list[str]]
 
