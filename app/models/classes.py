@@ -17,8 +17,25 @@ class SourceItem(TypedDict):
     title: str
     url: str
     content: str
+    domain: str
 
-class SectionResearch(TypedDict):
+class SectionResearchCandidates(TypedDict):
     questions: list[str]
     sources_by_question: dict[str, list[SourceItem]]
     all_sources: list[SourceItem]
+
+class EvaluatedSource(BaseModel):
+    title: str = Field(description="Title of the source")
+    url: str = Field(description="URL of the source")
+    domain: str = Field(description="Domain of the source")
+    snippet: str = Field(description="Short snippet or summary of the source content")
+    relevance_score: float = Field(description="Score from 0 to 1 for relevance to the section")
+    reliability_score: float = Field(description="Score from 0 to 1 for likely reliability")
+    keep: bool = Field(description="Whether this source should be kept for later writing/evidence synthesis")
+    reason: str = Field(description="Short reason for keeping or dropping the source")
+
+
+class SectionEvidenceResult(BaseModel):
+    kept_sources: list[EvaluatedSource] = Field(description="Sources worth keeping for this section")
+    dropped_sources: list[EvaluatedSource] = Field(description="Sources considered but rejected")
+    coverage_gaps: list[str] = Field(description="Important unanswered questions or weakly supported areas in this section")

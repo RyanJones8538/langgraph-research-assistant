@@ -1,7 +1,10 @@
+from urllib import response
+
 from langchain_tavily import TavilySearch
+from urllib.parse import urlparse
 
 def make_search_sources():
-    search = TavilySearch(max_results=3)
+    search = TavilySearch(max_results=2)
 
     def search_sources(state):
         section_questions = state["section_questions"]
@@ -12,14 +15,16 @@ def make_search_sources():
             all_sources = []
 
             for question in questions:
-                response = search.invoke(question)
+                response = search.invoke({"query": question})
+                print("RAW RESPONSE:", response)
+                print("TYPE:", type(response))
                 result_items = response.get("results", [])
-
                 cleaned_items = [
                     {
                         "title": item.get("title", ""),
                         "url": item.get("url", ""),
                         "content": item.get("content", ""),
+                        "domain": urlparse(item.get("url", "")).netloc.lower(), #I dislike the double invocation of urlparse here, but it keeps the node decoupled from the specific SourceItem structure in the codebase
                     }
                 for item in result_items
                 ]
@@ -31,7 +36,7 @@ def make_search_sources():
             deduped_sources = []
 
             for source in all_sources:
-                url = source.url
+                url = source.get("url", "")
                 if url not in seen_urls:
                     seen_urls.add(url)
                     deduped_sources.append(source)

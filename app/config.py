@@ -1,5 +1,5 @@
 from langchain_openai import ChatOpenAI
-from app.models.classes import OutlineContent, SectionQuestions
+from app.models.classes import OutlineContent, SectionEvidenceResult, SectionQuestions
 
 def get_llm() -> ChatOpenAI:
     return ChatOpenAI(
@@ -12,3 +12,6 @@ def outline_llm():
 
 def question_llm():
     return get_llm().with_structured_output(SectionQuestions)
+
+def validation_llm():
+    return get_llm().with_structured_output(SectionEvidenceResult)
