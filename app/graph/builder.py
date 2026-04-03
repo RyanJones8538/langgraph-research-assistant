@@ -1,6 +1,7 @@
 from app.graph.research import build_research_graph
 from app.models.classes import OutlineContent
-from app.nodes.outline import make_generate_outline, make_parse_review
+from app.nodes.outline.outline import make_generate_outline
+from app.nodes.outline.parse_review import make_parse_review
 from langgraph.graph import END, START, StateGraph
 from app.config import get_llm, outline_llm
 from typing_extensions import TypedDict
