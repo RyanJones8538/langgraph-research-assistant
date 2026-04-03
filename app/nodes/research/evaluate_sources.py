@@ -88,6 +88,8 @@ def make_evaluate_evidence(llm):
         candidate_sources = state["candidate_sources"]
         section_questions = state["section_questions"]
         research_complete = state["research_complete"]
+        complete_validation = state.get("validated_sources", {})
+        research_iteration = state.get("research_iteration", 0)
 
         validated_sources: dict[str, SectionEvidenceResult] = {}
 
@@ -113,7 +115,8 @@ def make_evaluate_evidence(llm):
                     ],
                 )
                 continue
-
+            if research_iteration > 0:
+                prelim_kept = list(set(prelim_kept) -set(complete_validation[section_title].kept_sources))  #removes repeated sources across iterations to avoid redundant LLM usage.
             # 3. LLM evaluation of remaining sources
             prompt = f"""
                 You are evaluating research sources for a report.
