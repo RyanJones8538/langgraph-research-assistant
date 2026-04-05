@@ -7,6 +7,7 @@ def make_identify_gaps():
         number_of_runs = state.get("research_iteration", 0)
         research_complete = state.get("research_complete", {})
         should_continue = True
+        number_of_runs+=1
 
         for section in evaluated_sources:
             if research_complete[section]:
@@ -15,10 +16,10 @@ def make_identify_gaps():
                 research_complete[section] = True
                 continue
             should_continue = False
-        if number_of_runs > 3:
+        if number_of_runs >= 3:
             should_continue = True
         return {
-            "research_iteration": number_of_runs + 1,
+            "research_iteration": number_of_runs,
             "should_continue": should_continue,
             "research_complete": research_complete
         }

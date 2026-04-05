@@ -19,6 +19,7 @@ def run(topic: str):
         "outline_history": [],
         "review_action": None,
         "review_comment": None,
+        "validated_sources": {},
         "status": "new",
     }
     return graph.invoke(initial_state)

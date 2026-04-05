@@ -40,6 +40,13 @@ def dedupe_sources(sources: list[SourceItem]) -> list[EvaluatedSource]:
 
     return deduped
 
+def remove_previously_kept_sources(
+    prelim_kept: list[EvaluatedSource],
+    previous_kept: list[EvaluatedSource],
+) -> list[EvaluatedSource]:
+    previous_urls = {source.url.strip() for source in previous_kept if source.url.strip()}
+    return [source for source in prelim_kept if source.url.strip() not in previous_urls]
+
 def deterministic_filter(sources: list[EvaluatedSource]) -> tuple[list[EvaluatedSource], list[EvaluatedSource]]:
     kept = []
     dropped = []
@@ -116,7 +123,12 @@ def make_evaluate_evidence(llm):
                 )
                 continue
             if research_iteration > 0:
-                prelim_kept = list(set(prelim_kept) -set(complete_validation[section_title].kept_sources))  #removes repeated sources across iterations to avoid redundant LLM usage.
+                previous_result = complete_validation.get(section_title)
+                if previous_result:
+                    # Removes repeated sources across iterations to avoid redundant LLM usage.
+                    prelim_kept = remove_previously_kept_sources(
+                        prelim_kept, previous_result.kept_sources
+                    )
             # 3. LLM evaluation of remaining sources
             prompt = f"""
                 You are evaluating research sources for a report.

@@ -1,4 +1,5 @@
-from app.models.classes import OutlineContent, SectionEvidenceResult, SectionResearchCandidates, SourceItem
+from app.graph.writer import build_writer_graph
+from app.models.classes import OutlineContent, SectionEvidenceResult, SectionResearchCandidates
 from app.nodes.research.evaluate_sources import make_evaluate_evidence
 from app.nodes.research.identify_gaps import make_identify_gaps
 from app.nodes.research.question_generator import make_generate_questions
@@ -8,12 +9,12 @@ from app.config import question_llm, validation_llm
 from typing_extensions import TypedDict
 
 class ResearchState(TypedDict):
+    request_id: str
     topic: str
     outline_object: OutlineContent
     section_questions: dict[str, list[str]]
     candidate_sources: dict[str, SectionResearchCandidates]
     validated_sources: dict[str, SectionEvidenceResult]
-    evidence_by_section: dict[str, list[str]]
     research_iteration: int
     should_continue: bool
     research_complete: dict[str, bool]
@@ -36,6 +37,7 @@ def build_research_graph():
     builder.add_node("search_sources", make_search_sources())
     builder.add_node("evaluate_sources", make_evaluate_evidence(validation_llm))
     builder.add_node("identify_gaps", make_identify_gaps())
+    builder.add_node("writer_graph", build_writer_graph())
 
 
     # Generate Graph Edges
@@ -49,7 +51,7 @@ def build_research_graph():
         route_research, {
             "continue": END,
             "retry": "search_sources"
-    })
+        })
 
     return builder.compile()
 
@@ -61,8 +63,6 @@ def initialize_research_state(state):
             research_state_init[section.title] = False
             for subsection in section.subsections:
                 research_state_init[subsection] = False
-
-
     return {
         "research_iteration": 0,
         "should_continue": False,

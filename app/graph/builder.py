@@ -1,5 +1,6 @@
 from app.graph.research import build_research_graph
-from app.models.classes import OutlineContent
+from app.graph.writer import build_writer_graph
+from app.models.classes import OutlineContent, SectionEvidenceResult
 from app.nodes.outline.outline import make_generate_outline
 from app.nodes.outline.parse_review import make_parse_review
 from langgraph.graph import END, START, StateGraph
@@ -15,6 +16,7 @@ class OutlineState(TypedDict):
     outline_history: list[str]
     review_action: str | None
     review_comment: str | None
+    validated_sources: dict[str, SectionEvidenceResult]
     status: str
 
 def handle_invalid_review(state):
@@ -42,6 +44,7 @@ def build_graph():
     builder.add_node("parse_review", make_parse_review(get_llm))
     builder.add_node("handle_invalid_review", handle_invalid_review)
     builder.add_node("research_graph", build_research_graph())
+    builder.add_node("writer_graph", build_writer_graph())
 
     # Generate Graph Edges
     builder.add_edge(START, "generate_outline")
@@ -56,6 +59,8 @@ def build_graph():
             "invalid_review": "handle_invalid_review"
         }
     )
+    builder.add_edge("research_graph", "writer_graph")
+    builder.add_edge("writer_graph", END)
 
     return builder.compile()
 
