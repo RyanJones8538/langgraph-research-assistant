@@ -2,6 +2,7 @@ from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
+from app.config import editor_llm, get_llm
 from app.models.classes import OutlineContent, SectionEvidenceResult, WritingDrafts, WritingFeedback
 from app.nodes.writer.edit_report import make_edit_report
 from app.nodes.writer.write_report import make_write_report
@@ -21,6 +22,15 @@ class WriterState(TypedDict):
 
 def route_writer(state):
     should_continue = state["should_continue"]
+    writing_complete = state["writing_complete"]
+
+    falsesFound = False
+    for section_title in writing_complete:
+        if writing_complete[section_title] == False:
+            falsesFound = True
+            break
+    if falsesFound == False:
+        should_continue = True
 
     if should_continue == True:
         return "continue"
@@ -30,8 +40,8 @@ def build_writer_graph():
     builder = StateGraph(WriterState)
 
     builder.add_node("initialize", initialize_writer_state)
-    builder.add_node("writer", make_write_report())
-    builder.add_node("editor", make_edit_report())
+    builder.add_node("writer", make_write_report(get_llm))
+    builder.add_node("editor", make_edit_report(editor_llm))
 
     builder.add_edge(START, "initialize")
     builder.add_edge("initialize", "writer")

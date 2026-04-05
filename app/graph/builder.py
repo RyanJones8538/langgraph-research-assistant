@@ -11,6 +11,7 @@ class OutlineState(TypedDict):
     request_id: str
     topic: str
     request_messages: list[str]
+    section_questions: dict[str, list[str]]
     current_outline: str
     outline_object: OutlineContent
     outline_history: list[str]

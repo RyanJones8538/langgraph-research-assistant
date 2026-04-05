@@ -58,13 +58,25 @@ def build_research_graph():
 def initialize_research_state(state):
     research_state_init: dict[str, bool] = {}
     outline_object = state.get("outline_object")
+    validated_sources: dict[str, SectionEvidenceResult] = {}
     if outline_object:
         for section in outline_object.outline_formatted:
             research_state_init[section.title] = False
+            validated_sources[section.title] = SectionEvidenceResult(
+                kept_sources=[],
+                dropped_sources=[],
+                coverage_gaps=[]
+            )
             for subsection in section.subsections:
                 research_state_init[subsection] = False
+                validated_sources[subsection] = SectionEvidenceResult(
+                kept_sources=[],
+                dropped_sources=[],
+                coverage_gaps=[]
+            )
     return {
         "research_iteration": 0,
         "should_continue": False,
-        "research_complete": research_state_init
+        "research_complete": research_state_init,
+        "validated_sources": validated_sources
     }

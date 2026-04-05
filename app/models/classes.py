@@ -41,8 +41,7 @@ class SectionEvidenceResult(BaseModel):
     coverage_gaps: list[str] = Field(description="Important unanswered questions or weakly supported areas in this section")
 
 class WritingSectionFeedback(BaseModel):
-    section_title: str = Field(description="Title of the section")
-    feedback: str = Field(description="Feedback on the writing for this section, including what to improve or add")
+    feedback: list[str] = Field(description="Feedback on the writing for this section, including what to improve or add")
     pass_or_fail: bool = Field(description="Whether the section writing passed review or needs revision")
 
 class WritingFeedback(BaseModel):

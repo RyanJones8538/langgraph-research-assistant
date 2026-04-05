@@ -15,6 +15,7 @@ def run(topic: str):
         "topic": topic,
         "request_messages": [topic],
         "current_outline": "",
+        "section_questions": {},
         "outline_object": OutlineContent(outline_formatted=[]),
         "outline_history": [],
         "review_action": None,
