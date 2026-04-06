@@ -16,7 +16,7 @@ class ResearchState(TypedDict):
     candidate_sources: dict[str, SectionResearchCandidates]
     validated_sources: dict[str, SectionEvidenceResult]
     research_iteration: int
-    should_continue: bool
+    should_research_continue: bool
     research_complete: dict[str, bool]
 
 

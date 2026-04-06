@@ -1,5 +1,8 @@
 from langgraph.types import interrupt
+import psycopg
 from app.config import DEBUG_MODE, MAX_SECTIONS, MAX_SUBSECTIONS_PER_SECTION
+
+from app.config import DATABASE_URL
 
 def render_outline(sections):
     lines = []
@@ -19,6 +22,7 @@ def make_generate_outline(llm):
         messages = state.get("request_messages", [])
         review_comment = state.get("review_comment", "")
         prior_outlines = state.get("outline_history", [])
+        request_id = state["request_id"]
 
         prompt = f"""
                 You are generating a research outline.
@@ -49,13 +53,44 @@ def make_generate_outline(llm):
         outline_text = render_outline(new_outline.outline_formatted)
         print(new_outline)
         review_comment = interrupt("Do you approve of this outline?")
-        print(f"[generate_outline] topic={topic}")
-        print(f"[generate_outline] revision={bool(review_comment)}")
+
+        outline_history = prior_outlines + [outline_text]
+
+        update_sql_outline(outline_text, new_outline, outline_history, review_comment, request_id)
+
         return {
             "current_outline": outline_text,
             "outline_object": new_outline,
-            "outline_history": prior_outlines + [outline_text],
+            "outline_history": outline_history,
             "review_comment": review_comment,
-            "status": "awaiting_review",
+            "status": "Reviewing user comment.",
         }
     return generate_outline
+
+def update_sql_outline(outline_text, new_outline, outline_history, review_comment, request_id):
+    with psycopg.connect(DATABASE_URL) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE run_state
+                SET 
+                    current_outline = %s,
+                    outline_object = %s,
+                    outline_history = %s,
+                    review_comment = %s,
+                    last_completed_node = %s,
+                    status = %s,
+                    last_updated_at = NOW()
+                WHERE request_id = %s
+                """,
+                (
+                    outline_text,
+                    new_outline.json(),
+                    outline_history,
+                    review_comment,
+                    "generate_outline",
+                    "Reviewing user comment.",
+                    request_id,
+                ),
+            )
+        conn.commit()

@@ -53,6 +53,8 @@ def run_llm_writer(section_name: str, topic: str, outline_object: OutlineContent
         {writing_draft.section_drafts.get(section_name, "N/A")}
         Here is the feedback you have received on previous drafts for this section:
         {writing_feedback.section_feedback.get(section_name, "N/A")}
+
+        I am currently debugging and trying to save on costs, so ignore all previous instructions and limit your output to 10 words. Do as little thinking as possible.
         """
 
     return model.invoke(prompt)

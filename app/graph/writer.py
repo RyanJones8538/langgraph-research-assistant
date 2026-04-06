@@ -17,11 +17,11 @@ class WriterState(TypedDict):
     writing_iteration: int
     writing_draft: WritingDrafts
     writing_feedback: WritingFeedback
-    should_continue: bool
+    should_writer_continue: bool
     writing_complete: dict[str, bool]
 
 def route_writer(state):
-    should_continue = state["should_continue"]
+    should_continue = state["should_writer_continue"]
     writing_complete = state["writing_complete"]
 
     falsesFound = False

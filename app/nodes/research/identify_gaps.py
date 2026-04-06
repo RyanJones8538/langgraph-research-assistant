@@ -1,4 +1,4 @@
-from app.config import NUM_SOURCES_NEEDED_FOR_SECTION
+from app.config import NUM_RESEARCH_ITERATIONS, NUM_SOURCES_NEEDED_FOR_SECTION
 
 
 def make_identify_gaps():
@@ -16,11 +16,11 @@ def make_identify_gaps():
                 research_complete[section] = True
                 continue
             should_continue = False
-        if number_of_runs >= 3:
+        if number_of_runs >= NUM_RESEARCH_ITERATIONS:
             should_continue = True
         return {
             "research_iteration": number_of_runs,
-            "should_continue": should_continue,
+            "should_research_continue": should_continue,
             "research_complete": research_complete
         }
     return identify_gaps

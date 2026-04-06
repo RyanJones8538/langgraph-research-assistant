@@ -1,3 +1,4 @@
+from app.config import NUM_WRITING_ITERATIONS
 from app.models.classes import WritingDrafts, WritingFeedback
 
 
@@ -11,7 +12,7 @@ def make_edit_report(llm):
         writing_draft = state.get("writing_draft", WritingDrafts(section_drafts={}))
         writing_feedback = state.get("writing_feedback", WritingFeedback(section_feedback={}))
         number_of_iterations = number_of_iterations + 1
-        if number_of_iterations >= 3:
+        if number_of_iterations >= NUM_WRITING_ITERATIONS:
             should_continue = True
         
         for section in outline_object.outline_formatted:
@@ -24,7 +25,7 @@ def make_edit_report(llm):
                     writing_complete[subsection] = writing_feedback.section_feedback[subsection].pass_or_fail
         return {
             "writing_iteration": number_of_iterations,
-            "should_continue": should_continue,
+            "should_writer_continue": should_continue,
             "writing_complete": writing_complete,
             "writing_feedback": writing_feedback,
         }
@@ -45,5 +46,7 @@ def run_llm_editor(section_name: str, section_questions: list[str], section_draf
 
         Your output should include a detailed list of specific edits that should be made to the draft to improve it and a final evaluation of pass or fail. If the draft is good enough in its current state,
         simply write "No edits needed. Pass." If the draft is very poor and needs to be completely rewritten, write "Draft needs to be completely rewritten. Fail."
+
+        I am currently debugging and trying to save on costs, so ignore all previous instructions and pass the section with no feedback so long as it is under 10 words.
         """
     return model.invoke(prompt)

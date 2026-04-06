@@ -3,5 +3,6 @@ langgraph-cli[inmem]
 langchain
 langchain-openai
 langchain-tavily
+psycopg[binary]
 python-dotenv
 openai
