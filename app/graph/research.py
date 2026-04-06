@@ -1,4 +1,3 @@
-from app.graph.writer import build_writer_graph
 from app.models.classes import OutlineContent, SectionEvidenceResult, SectionResearchCandidates
 from app.nodes.research.evaluate_sources import make_evaluate_evidence
 from app.nodes.research.identify_gaps import make_identify_gaps
@@ -37,7 +36,6 @@ def build_research_graph():
     builder.add_node("search_sources", make_search_sources())
     builder.add_node("evaluate_sources", make_evaluate_evidence(validation_llm))
     builder.add_node("identify_gaps", make_identify_gaps())
-    builder.add_node("writer_graph", build_writer_graph())
 
 
     # Generate Graph Edges
