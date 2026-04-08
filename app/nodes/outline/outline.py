@@ -64,7 +64,7 @@ def make_generate_outline(llm):
                 Otherwise, generate a fresh outline.
                 Return:
                 Valid JSON only, no markdown fences, with this shape:
-                {"outline_formatted": {"Section title": ["Subsection 1", "Subsection 2"]}}
+                {{"Section title": ["Subsection 1", "Subsection 2"]}}
                 Make sure the outline content is accurate and complete.
                 {"For debugging purposes, limit your outline to "
                  + str(MAX_SECTIONS)
