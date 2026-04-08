@@ -1,3 +1,5 @@
+import os
+
 import psycopg
 from uuid_utils import uuid4
 
@@ -44,27 +46,38 @@ def initialize_run(state: OutlineState, config: RunnableConfig | None = None):
     }
 
 def create_run_sql(request_id: str, topic: str):
-    with psycopg.connect(DATABASE_URL) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO run_state (request_id, topic, status, created_at, last_updated_at)
-                VALUES (%s, %s, %s, NOW(), NOW())
-                 ON CONFLICT (request_id) DO UPDATE
-                 SET topic = EXCLUDED.topic,
-                     status = EXCLUDED.status,
-                     last_updated_at = NOW()
-                 WHERE run_state.request_id = EXCLUDED.request_id
-                """,
-                (
-                    request_id,
-                    topic,
-                    "Initializing Research Assistant",
-                ),
-            )
-            if cur.rowcount != 1:
-                raise RuntimeError(f"Failed to create or update run_state row for request_id={request_id}")
-        conn.commit()
+    try:
+        with psycopg.connect(DATABASE_URL) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO run_state (request_id, topic, status, created_at, last_updated_at)
+                    VALUES (%s, %s, %s, NOW(), NOW())
+                        ON CONFLICT (request_id) DO UPDATE
+                        SET topic = EXCLUDED.topic,
+                            status = EXCLUDED.status,
+                            last_updated_at = NOW()
+                        WHERE run_state.request_id = EXCLUDED.request_id
+                    """,
+                    (
+                        request_id,
+                        topic,
+                        "Initializing Research Assistant",
+                    ),
+                )
+                if cur.rowcount != 1:
+                    raise RuntimeError(f"Failed to create or update run_state row for request_id={request_id}")
+            conn.commit()
+    except psycopg.OperationalError as exc:
+        db_host = os.getenv("DB_HOST", "")
+        err_text = str(exc)
+        if "failed to resolve host 'db'" in err_text or (db_host == "db" and "getaddrinfo failed" in err_text):
+            raise RuntimeError(
+                "Database host 'db' is only resolvable from inside Docker Compose containers. "
+                "If you run `langgraph dev` from VS Code/host Python, set DB_HOST=localhost in `.env`. "
+                "If you run the backend in Docker, DB_HOST=db is correct."
+            ) from exc
+        raise
 
 def handle_invalid_review(state):
     return {
@@ -112,5 +125,6 @@ def build_graph():
     builder.add_edge("writer_graph", END)
 
     return builder.compile()
+
 
 graph = build_graph()
