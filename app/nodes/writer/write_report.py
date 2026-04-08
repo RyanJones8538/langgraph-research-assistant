@@ -2,38 +2,45 @@ import json
 import psycopg
 
 from app.config import DATABASE_URL
-from app.models.classes import OutlineContent, SectionEvidenceResult, WritingDrafts, WritingFeedback
+from app.models.classes import OutlineContent
 
 
 def make_write_report(llm):
     def write_report(state):
         outline_object = state["outline_object"]
-        writing_draft = state.get("writing_draft", WritingDrafts(section_drafts={}))
-        writing_feedback = state.get("writing_feedback", WritingFeedback(section_feedback={}))
+        writing_draft = state.get("writing_draft", {"section_drafts": {}})
+        writing_feedback = state.get("writing_feedback", {"section_feedback": {}})
         writing_complete = state.get("writing_complete", {})
         section_questions = state["section_questions"]
         validated_sources = state["validated_sources"]
         topic = state["topic"]
 
+        section_drafts = writing_draft.get("section_drafts", {})
+        section_feedback = writing_feedback.get("section_feedback", {})
+
         for section in outline_object.outline_formatted:
             if(writing_complete.get(section.title) != True):
                 section_text = run_llm_writer(section.title, topic, outline_object, section_questions, validated_sources, writing_draft, writing_feedback, llm)
-                writing_draft.section_drafts[section.title] = section_text
+                section_drafts[section.title] = section_text
             for subsection in section.subsections:
                 if(writing_complete.get(subsection) != True):
                     subsection_text = run_llm_writer(subsection, topic, outline_object, section_questions, validated_sources, writing_draft, writing_feedback, llm)
-                    writing_draft.section_drafts[subsection] = subsection_text
-        update_sql_write_report(writing_draft, state.get("request_id", ""))
+                    section_drafts[subsection] = subsection_text
+        update_sql_write_report(section_drafts, state.get("request_id", ""))
         return {
-            "writing_draft": writing_draft
+            "writing_draft": {
+                "section_drafts": section_drafts,
+            },
         }
     return write_report
 
 def run_llm_writer(section_name: str, topic: str, outline_object: OutlineContent, 
-                   section_questions: dict[str, list[str]], validated_sources: dict[str, SectionEvidenceResult], 
-                   writing_draft: WritingDrafts, writing_feedback: WritingFeedback, llm) -> str:
+                   section_questions: dict[str, list[str]], validated_sources: dict[str, dict], 
+                   writing_draft: dict, writing_feedback: dict, llm) -> str:
     model = llm()
-    valid_sources = validated_sources.get(section_name, SectionEvidenceResult(kept_sources=[], dropped_sources=[], coverage_gaps=[])).kept_sources
+    valid_sources = validated_sources.get(section_name, {}).get("kept_sources", [])
+    section_drafts = writing_draft.get("section_drafts", {})
+    section_feedback = writing_feedback.get("section_feedback", {})
 
     prompt = f"""You are an assistant that writes reports based on an outline, research sources, and section-specific questions, and a topic.
         The report should be structured according to the outline, and should use the research sources to answer the section-specific questions.
@@ -54,16 +61,19 @@ def run_llm_writer(section_name: str, topic: str, outline_object: OutlineContent
         {valid_sources}
         You may have already written some drafts for this section and been given feedback. If you have, the information follows. If you have not, you can ignore this section, and the spaces where earlier drafts and feedback would appear will be printed with 'N/A'.
         Here are the previous drafts for this section:
-        {writing_draft.section_drafts.get(section_name, "N/A")}
+        {section_drafts.get(section_name, "N/A")}
         Here is the feedback you have received on previous drafts for this section:
-        {writing_feedback.section_feedback.get(section_name, "N/A")}
+        {section_feedback.get(section_name, "N/A")}
 
         I am currently debugging and trying to save on costs, so ignore all previous instructions and limit your output to 10 words. Do as little thinking as possible.
         """
 
-    return model.invoke(prompt)
+    result = model.invoke(prompt)
+    if isinstance(result, str):
+        return result
+    return str(getattr(result, "content", result))
 
-def update_sql_write_report(writing_draft, request_id):
+def update_sql_write_report(section_drafts, request_id):
     with psycopg.connect(DATABASE_URL) as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -76,7 +86,7 @@ def update_sql_write_report(writing_draft, request_id):
                 WHERE request_id = %s
                 """,
                 (
-                    json.dumps(writing_draft.section_drafts), 
+                    json.dumps(section_drafts), 
                     "writer",
                     "Completed writing iteration.",
                     request_id

@@ -48,9 +48,16 @@ def dedupe_sources(sources: list[SourceItem]) -> list[EvaluatedSource]:
 
 def remove_previously_kept_sources(
     prelim_kept: list[EvaluatedSource],
-    previous_kept: list[EvaluatedSource],
+    previous_kept: list,
 ) -> list[EvaluatedSource]:
-    previous_urls = {source.url.strip() for source in previous_kept if source.url.strip()}
+    previous_urls = set()
+    for source in previous_kept:
+        if isinstance(source, dict):
+            url = source.get("url", "").strip()
+        else:
+            url = source.url.strip()
+        if url:
+            previous_urls.add(url)
     return [source for source in prelim_kept if source.url.strip() not in previous_urls]
 
 def deterministic_filter(sources: list[EvaluatedSource]) -> tuple[list[EvaluatedSource], list[EvaluatedSource]]:
@@ -104,7 +111,7 @@ def make_evaluate_evidence(llm):
         complete_validation = state.get("validated_sources", {})
         research_iteration = state.get("research_iteration", 0)
 
-        validated_sources: dict[str, SectionEvidenceResult] = {}
+        validated_sources: dict[str, dict] = {}
 
         for section_title in candidate_sources:
             if research_complete[section_title]:
@@ -120,20 +127,20 @@ def make_evaluate_evidence(llm):
 
             # If nothing survives deterministic filtering, record the gap and continue
             if not prelim_kept:
-                validated_sources[section_title] = SectionEvidenceResult(
-                    kept_sources=[],
-                    dropped_sources=prelim_dropped,
-                    coverage_gaps=[
+                validated_sources[section_title] = {
+                    "kept_sources": [],
+                    "dropped_sources": [item.model_dump() for item in prelim_dropped],
+                    "coverage_gaps": [
                         f"No usable sources survived deterministic filtering for section '{section_title}'."
                     ],
-                )
+                }
                 continue
             if research_iteration > 0:
                 previous_result = complete_validation.get(section_title)
                 if previous_result:
                     # Removes repeated sources across iterations to avoid redundant LLM usage.
                     prelim_kept = remove_previously_kept_sources(
-                        prelim_kept, previous_result.kept_sources
+                        prelim_kept, previous_result.get("kept_sources", [])
                     )
             # 3. LLM evaluation of remaining sources
             prompt = f"""
@@ -168,13 +175,13 @@ def make_evaluate_evidence(llm):
 
             # Merge deterministic drops into dropped_sources for traceability
             dropped_dicts = [item.model_dump() for item in result.dropped_sources]
-            dropped_dicts.extend(prelim_dropped)
+            dropped_dicts.extend([item.model_dump() for item in prelim_dropped])
 
-            validated_sources[section_title] = SectionEvidenceResult(
-                kept_sources=[item.model_dump() for item in result.kept_sources],
-                dropped_sources=dropped_dicts,
-                coverage_gaps=result.coverage_gaps,
-            )
+            validated_sources[section_title] = {
+                "kept_sources": [item.model_dump() for item in result.kept_sources],
+                "dropped_sources": dropped_dicts,
+                "coverage_gaps": result.coverage_gaps,
+            }
         update_sql_evaluate_sources(validated_sources, state.get("request_id", ""))
         return {
             "validated_sources": validated_sources

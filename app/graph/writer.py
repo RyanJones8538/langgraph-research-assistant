@@ -5,7 +5,7 @@ from typing_extensions import TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from app.config import DATABASE_URL, editor_llm, get_llm
-from app.models.classes import OutlineContent, SectionEvidenceResult, WritingDrafts, WritingFeedback
+from app.models.classes import OutlineContent, WritingDrafts, WritingFeedback
 from app.nodes.writer.edit_report import make_edit_report
 from app.nodes.writer.write_report import make_write_report
 
@@ -15,10 +15,10 @@ class WriterState(TypedDict):
     topic: str
     outline_object: OutlineContent
     section_questions: dict[str, list[str]]
-    validated_sources: dict[str, SectionEvidenceResult]
+    validated_sources: dict[str, dict]
     writing_iteration: int
-    writing_draft: WritingDrafts
-    writing_feedback: WritingFeedback
+    writing_draft: dict
+    writing_feedback: dict[str, str]
     should_writer_continue: bool
     writing_complete: dict[str, bool]
 
@@ -64,13 +64,15 @@ def initialize_writer_state(state):
         writing_state_init[section.title] = False
         for subsection in section.subsections:
             writing_state_init[subsection] = False
+
+    update_sql_initialize_writer_state(0, False, writing_state_init, state.get("request_id", ""))
     return {
         "writing_iteration": 0,
         "should_continue": False,
         "writing_complete": writing_state_init
     }
 
-def update_sql_initialize_writer_state(writing_iteration, should_continue, writing_complete, request_id):
+def update_sql_initialize_writer_state(writing_iteration, should_writer_continue, writing_complete, request_id):
     with psycopg.connect(DATABASE_URL) as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -86,7 +88,7 @@ def update_sql_initialize_writer_state(writing_iteration, should_continue, writi
                  """,
                  (
                     writing_iteration,
-                    should_continue,
+                    should_writer_continue,
                     json.dumps(writing_complete),
                     "initialize_writer",
                     "Initialized writer state.",

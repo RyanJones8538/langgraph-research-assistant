@@ -15,7 +15,7 @@ def make_identify_gaps():
         for section in evaluated_sources:
             if research_complete[section]:
                 continue
-            if len(evaluated_sources[section].kept_sources) >= NUM_SOURCES_NEEDED_FOR_SECTION:
+            if len(evaluated_sources[section].get("kept_sources", [])) >= NUM_SOURCES_NEEDED_FOR_SECTION:
                 research_complete[section] = True
                 continue
             should_continue = False

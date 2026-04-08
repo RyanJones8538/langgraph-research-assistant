@@ -60,7 +60,9 @@ def make_search_sources():
                 sources_by_gap = {}
                 all_sources = []
 
-                for gap in validated_sources[section].coverage_gaps:
+                section_validation = validated_sources.get(section, {})
+                coverage_gaps = section_validation.get("coverage_gaps", [])
+                for gap in coverage_gaps:
                     response = search.invoke({"query": gap})
                     print("RAW RESPONSE:", response)
                     print("TYPE:", type(response))

@@ -23,7 +23,7 @@ class OutlineState(TypedDict):
     outline_history: list[str]
     review_action: str | None
     review_comment: str | None
-    validated_sources: dict[str, SectionEvidenceResult]
+    validated_sources: dict[str, dict]
     status: str
 
 def initialize_run(state: OutlineState, config: RunnableConfig | None = None):

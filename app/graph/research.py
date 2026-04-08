@@ -2,7 +2,7 @@ import json
 
 import psycopg
 
-from app.models.classes import OutlineContent, SectionEvidenceResult, SectionResearchCandidates
+from app.models.classes import OutlineContent, SectionResearchCandidates
 from app.nodes.research.evaluate_sources import make_evaluate_evidence
 from app.nodes.research.identify_gaps import make_identify_gaps
 from app.nodes.research.question_generator import make_generate_questions
@@ -17,7 +17,7 @@ class ResearchState(TypedDict):
     outline_object: OutlineContent
     section_questions: dict[str, list[str]]
     candidate_sources: dict[str, SectionResearchCandidates]
-    validated_sources: dict[str, SectionEvidenceResult]
+    validated_sources: dict[str, dict]
     research_iteration: int
     should_research_continue: bool
     research_complete: dict[str, bool]
@@ -60,22 +60,22 @@ def build_research_graph():
 def initialize_research_state(state):
     research_state_init: dict[str, bool] = {}
     outline_object = state.get("outline_object")
-    validated_sources: dict[str, SectionEvidenceResult] = {}
+    validated_sources: dict[str, dict] = {}
     if outline_object:
         for section in outline_object.outline_formatted:
             research_state_init[section.title] = False
-            validated_sources[section.title] = SectionEvidenceResult(
-                kept_sources=[],
-                dropped_sources=[],
-                coverage_gaps=[]
-            )
+            validated_sources[section.title] = {
+                "kept_sources": [],
+                "dropped_sources": [],
+                "coverage_gaps": []
+            }
             for subsection in section.subsections:
                 research_state_init[subsection] = False
-                validated_sources[subsection] = SectionEvidenceResult(
-                kept_sources=[],
-                dropped_sources=[],
-                coverage_gaps=[]
-            )
+                validated_sources[subsection] = {
+                    "kept_sources": [],
+                    "dropped_sources": [],
+                    "coverage_gaps": [],
+                }
     update_sql_initialize_research_state(0, False, research_state_init, validated_sources, state.get("request_id", ""))
     return {
         "research_iteration": 0,
@@ -84,7 +84,7 @@ def initialize_research_state(state):
         "validated_sources": validated_sources
     }
 
-def update_sql_initialize_research_state(research_iteration, should_continue, research_complete, validated_sources, request_id):
+def update_sql_initialize_research_state(research_iteration, should_research_continue, research_complete, validated_sources, request_id):
     with psycopg.connect(DATABASE_URL) as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -92,17 +92,17 @@ def update_sql_initialize_research_state(research_iteration, should_continue, re
                 UPDATE run_state
                 SET 
                     research_iteration = %s,
-                    should_continue = %s,
+                    should_research_continue = %s,
                     research_complete = %s,
                     validated_sources = %s,
-                    last_completed_node = "initialize_research",
-                    status = "Initialized research state.",
+                    last_completed_node = %s,
+                    status = %s,
                     last_updated_at = NOW()
                 WHERE request_id = %s
                 """,
                 (
                     research_iteration,
-                    should_continue,
+                    should_research_continue,
                     json.dumps(research_complete),
                     json.dumps(validated_sources),
                     "initialize_research",
