@@ -76,17 +76,16 @@ def make_generate_outline(llm):
         new_outline = _parse_outline(raw_outline)
         outline_text = render_outline(new_outline)
         print(new_outline)
-        review_comment = interrupt("Do you approve of this outline?")
 
         outline_history = prior_outlines + [outline_text]
 
         update_run_state(request_id, current_outline=outline_text, outline_object=new_outline, outline_history=outline_history,
-                          status="Generating outline.", last_node_visited="generate_outline")
+                          status="Generating outline.", last_completed_node="generate_outline")
         
         review_comment = interrupt("Do you approve of this outline?")
         
         update_run_state(request_id, current_outline=outline_text, outline_object=new_outline, outline_history=outline_history, review_comment=review_comment,
-                          status="Generating outline.", last_node_visited="generate_outline")
+                          status="Parsing user review of outline.", last_completed_node="generate_outline")
 
         return {
             "current_outline": outline_text,

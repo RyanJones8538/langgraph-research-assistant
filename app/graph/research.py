@@ -79,7 +79,7 @@ def initialize_research_state(state):
                     "coverage_gaps": [],
                 }
     update_run_state(state.get("request_id", ), research_iteration=0, should_research_continue=False, research_complete = research_state_init, validated_sources=validated_sources,
-                     status = "Initialized Research Subgraph.", last_node_visited = "initialize_research")
+                     status = "Initialized Research Subgraph.", last_completed_node = "initialize_research")
     return {
         "research_iteration": 0,
         "should_continue": False,

@@ -53,10 +53,11 @@ def create_run_sql(request_id: str, topic: str):
                 cur.execute(
                     """
                     INSERT INTO run_state (request_id, topic, status, created_at, last_updated_at)
-                    VALUES (%s, %s, %s, NOW(), NOW())
+                    VALUES (%s, %s, %s, %s, NOW(), NOW())
                         ON CONFLICT (request_id) DO UPDATE
                         SET topic = EXCLUDED.topic,
                             status = EXCLUDED.status,
+                            last_completed_node = NULL,
                             last_updated_at = NOW()
                         WHERE run_state.request_id = EXCLUDED.request_id
                     """,
@@ -64,6 +65,7 @@ def create_run_sql(request_id: str, topic: str):
                         request_id,
                         topic,
                         "Initializing Research Assistant",
+                        "initialize"
                     ),
                 )
                 if cur.rowcount != 1:

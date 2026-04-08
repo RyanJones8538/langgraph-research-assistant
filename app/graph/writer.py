@@ -68,7 +68,7 @@ def initialize_writer_state(state):
             writing_state_init[subsection] = False
 
     update_run_state(request_id, writing_iteration=0, should_writer_continue=False, writing_complete=writing_state_init,
-                     last_node_visited = "initialize_writer", status = "Initialized Writer Subgraph.")
+                     last_completed_node = "initialize_writer", status = "Initialized Writer Subgraph.")
     return {
         "writing_iteration": 0,
         "should_continue": False,

@@ -5,15 +5,30 @@ from app.models.classes import SectionEvidenceResult, SectionQuestions, WritingS
 
 load_dotenv()
 
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME")
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 
-DATABASE_URL = (
-    f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-)
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    missing_db_vars = [
+        var_name
+        for var_name, value in {
+            "DB_NAME": DB_NAME,
+            "DB_USER": DB_USER,
+            "DB_PASSWORD": DB_PASSWORD,
+        }.items()
+        if not value
+    ]
+    if missing_db_vars:
+        raise RuntimeError(
+            "Missing required database configuration variables: "
+            + ", ".join(missing_db_vars)
+            + ". Set them in your environment or .env file."
+        )
+    DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "true").lower() == "true"
 MAX_SECTIONS = int(os.getenv("MAX_SECTIONS", "2"))
