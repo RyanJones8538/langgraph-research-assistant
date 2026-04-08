@@ -1,12 +1,8 @@
-import json
-
 from urllib.parse import urlparse
-
-import psycopg
 
 from app import state
 from app.config import DATABASE_URL
-from app.models.classes import EvaluatedSource, SectionEvidenceResult, SourceItem
+from app.models.classes import EvaluatedSource, SourceItem
 from app.state.run_state import update_run_state
 
 

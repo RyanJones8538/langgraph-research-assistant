@@ -5,7 +5,7 @@ from typing_extensions import TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from app.config import DATABASE_URL, editor_llm, get_llm
-from app.models.classes import OutlineContent, WritingDrafts, WritingFeedback
+from app.models.classes import WritingDrafts, WritingFeedback
 from app.nodes.writer.edit_report import make_edit_report
 from app.nodes.writer.write_report import make_write_report
 from app.state.run_state import update_run_state
@@ -14,7 +14,7 @@ from app.state.run_state import update_run_state
 class WriterState(TypedDict):
     request_id: str
     topic: str
-    outline_object: OutlineContent
+    outline_object: dict[str, list[str]]
     section_questions: dict[str, list[str]]
     validated_sources: dict[str, dict]
     writing_iteration: int
@@ -61,12 +61,13 @@ def build_writer_graph():
 def initialize_writer_state(state):
     writing_state_init: dict[str, bool] = {}
     outline_object = state.get("outline_object")
-    for section in outline_object.outline_formatted:
-        writing_state_init[section.title] = False
-        for subsection in section.subsections:
+    request_id = state.get("request_id", "")
+    for section_title, subsections in outline_object.items():
+        writing_state_init[section_title] = False
+        for subsection in subsections:
             writing_state_init[subsection] = False
 
-    update_run_state(state.get("request_id", ), writing_iteration=0, should_writer_continue=False, writing_complete=writing_state_init,
+    update_run_state(request_id, writing_iteration=0, should_writer_continue=False, writing_complete=writing_state_init,
                      last_node_visited = "initialize_writer", status = "Initialized Writer Subgraph.")
     return {
         "writing_iteration": 0,

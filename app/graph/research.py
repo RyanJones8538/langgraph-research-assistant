@@ -2,7 +2,7 @@ import json
 
 import psycopg
 
-from app.models.classes import OutlineContent, SectionResearchCandidates
+from app.models.classes import SectionResearchCandidates
 from app.nodes.research.evaluate_sources import make_evaluate_evidence
 from app.nodes.research.identify_gaps import make_identify_gaps
 from app.nodes.research.question_generator import make_generate_questions
@@ -16,7 +16,7 @@ from app.state.run_state import update_run_state
 class ResearchState(TypedDict):
     request_id: str
     topic: str
-    outline_object: OutlineContent
+    outline_object: dict[str, list[str]]
     section_questions: dict[str, list[str]]
     candidate_sources: dict[str, SectionResearchCandidates]
     validated_sources: dict[str, dict]
@@ -64,14 +64,14 @@ def initialize_research_state(state):
     outline_object = state.get("outline_object")
     validated_sources: dict[str, dict] = {}
     if outline_object:
-        for section in outline_object.outline_formatted:
-            research_state_init[section.title] = False
-            validated_sources[section.title] = {
+        for section_title, subsections in outline_object.items():
+            research_state_init[section_title] = False
+            validated_sources[section_title] = {
                 "kept_sources": [],
                 "dropped_sources": [],
-                "coverage_gaps": []
+                "coverage_gaps": [],
             }
-            for subsection in section.subsections:
+            for subsection in subsections:
                 research_state_init[subsection] = False
                 validated_sources[subsection] = {
                     "kept_sources": [],

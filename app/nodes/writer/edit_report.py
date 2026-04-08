@@ -1,15 +1,11 @@
-import json
-import psycopg
-
-from app.config import DATABASE_URL, NUM_WRITING_ITERATIONS
-from app.models.classes import WritingDrafts, WritingFeedback
+from app.config import NUM_WRITING_ITERATIONS
 from app.state.run_state import update_run_state
 
 
 def make_edit_report(llm):
     def edit_report(state):
         number_of_iterations = state["writing_iteration"]
-        should_writer_continue = state.get("should_writer_continue", state.get("should_continue", False))
+        should_writer_continue = state.get("should_writer_continue", False)
         writing_complete = state["writing_complete"]
         section_questions = state["section_questions"]
         outline_object = state["outline_object"]
@@ -21,17 +17,19 @@ def make_edit_report(llm):
         if number_of_iterations >= NUM_WRITING_ITERATIONS:
             should_writer_continue = True
         
-        for section in outline_object.outline_formatted:
-            if writing_complete.get(section.title) != True:
-                section_feedback[section.title] = run_llm_editor(section.title, section_questions.get(section.title, []), section_drafts.get(section.title, "N/A"), llm)
-                writing_complete[section.title] = bool(section_feedback[section.title].get("pass_or_fail", False))
-            for subsection in section.subsections:
+        for section_title, subsections in outline_object.items():
+            if writing_complete.get(section_title) != True:
+                section_feedback[section_title] = run_llm_editor(section_title, section_questions.get(section_title, []), section_drafts.get(section_title, "N/A"), llm)
+                writing_complete[section_title] = bool(section_feedback[section_title].get("pass_or_fail", False))
+            for subsection in subsections:
                 if writing_complete.get(subsection) != True:
                     section_feedback[subsection] = run_llm_editor(subsection, section_questions.get(subsection, []), section_drafts.get(subsection, "N/A"), llm)
                     writing_complete[subsection] = bool(section_feedback[subsection].get("pass_or_fail", False))
-        update_run_state(state.get("request_id", ), writing_iteration=number_of_iterations, should_writer_continue=should_writer_continue, 
-                         writing_complete=writing_complete, writing_feedback={"section_feedback": section_feedback}, last_completed_node="editor", 
-                         status="Edited report and provided feedback.")
+        status = "Writing in progress."
+        if should_writer_continue:
+            status = "Completed writing iterations."
+        update_run_state(state.get("request_id", ), status=status,writing_iteration=number_of_iterations, should_writer_continue=should_writer_continue, 
+                         writing_complete=writing_complete, writing_feedback={"section_feedback": section_feedback}, last_completed_node="editor")
         return {
             "writing_iteration": number_of_iterations,
             "should_writer_continue": should_writer_continue,

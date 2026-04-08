@@ -5,12 +5,12 @@ from uuid_utils import uuid4
 
 from app.graph.research import build_research_graph
 from app.graph.writer import build_writer_graph
-from app.models.classes import OutlineContent, SectionEvidenceResult
+from app.models.classes import SectionEvidenceResult
 from app.nodes.outline.outline import make_generate_outline
 from app.nodes.outline.parse_review import make_parse_review
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
-from app.config import DATABASE_URL, get_llm, outline_llm
+from app.config import DATABASE_URL, get_llm
 from typing_extensions import TypedDict
 
 from app.state.run_state import update_run_state
@@ -21,7 +21,7 @@ class OutlineState(TypedDict):
     request_messages: list[str]
     section_questions: dict[str, list[str]]
     current_outline: str
-    outline_object: OutlineContent
+    outline_object: dict[str, list[str]]
     outline_history: list[str]
     review_action: str | None
     review_comment: str | None
@@ -102,7 +102,7 @@ def build_graph():
 
     # Generate Graph Nodes
     builder.add_node("initialize", initialize_run)
-    builder.add_node("generate_outline", make_generate_outline(outline_llm))
+    builder.add_node("generate_outline", make_generate_outline(get_llm))
     builder.add_node("parse_review", make_parse_review(get_llm))
     builder.add_node("handle_invalid_review", handle_invalid_review)
     builder.add_node("research_graph", build_research_graph())

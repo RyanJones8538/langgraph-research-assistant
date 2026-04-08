@@ -4,7 +4,6 @@ from app.graph.builder import build_graph, OutlineState
 from uuid import uuid4
 from langgraph.types import Command
 
-from app.models.classes import OutlineContent
 
 load_dotenv()
 
@@ -19,7 +18,7 @@ def start_run(topic: str, thread_id: str):
         "request_messages": [topic],
         "current_outline": "",
         "section_questions": {},
-        "outline_object": OutlineContent(outline_formatted=[]),
+        "outline_object": {},
         "outline_history": [],
         "review_action": None,
         "review_comment": None,

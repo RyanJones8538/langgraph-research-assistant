@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
-from app.models.classes import OutlineContent, SectionEvidenceResult, SectionQuestions, WritingSectionFeedback
+from app.models.classes import SectionEvidenceResult, SectionQuestions, WritingSectionFeedback
 
 load_dotenv()
 
@@ -29,9 +29,6 @@ def get_llm() -> ChatOpenAI:
         model="gpt-4o",
         temperature=0,
     )
-
-def outline_llm():
-    return get_llm().with_structured_output(OutlineContent)
 
 def question_llm():
     return get_llm().with_structured_output(SectionQuestions)

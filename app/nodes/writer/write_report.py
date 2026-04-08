@@ -1,8 +1,3 @@
-import json
-import psycopg
-
-from app.config import DATABASE_URL
-from app.models.classes import OutlineContent
 from app.state.run_state import update_run_state
 
 
@@ -17,13 +12,15 @@ def make_write_report(llm):
         topic = state["topic"]
 
         section_drafts = writing_draft.get("section_drafts", {})
+
+        section_drafts = writing_draft.get("section_drafts", {})
         section_feedback = writing_feedback.get("section_feedback", {})
 
-        for section in outline_object.outline_formatted:
-            if(writing_complete.get(section.title) != True):
-                section_text = run_llm_writer(section.title, topic, outline_object, section_questions, validated_sources, writing_draft, writing_feedback, llm)
-                section_drafts[section.title] = section_text
-            for subsection in section.subsections:
+        for section_title, subsections in outline_object.items():
+            if(writing_complete.get(section_title) != True):
+                section_text = run_llm_writer(section_title, topic, outline_object, section_questions, validated_sources, writing_draft, writing_feedback, llm)
+                section_drafts[section_title] = section_text
+            for subsection in subsections:
                 if(writing_complete.get(subsection) != True):
                     subsection_text = run_llm_writer(subsection, topic, outline_object, section_questions, validated_sources, writing_draft, writing_feedback, llm)
                     section_drafts[subsection] = subsection_text
@@ -35,7 +32,7 @@ def make_write_report(llm):
         }
     return write_report
 
-def run_llm_writer(section_name: str, topic: str, outline_object: OutlineContent, 
+def run_llm_writer(section_name: str, topic: str, outline_object: dict[str, list[str]], 
                    section_questions: dict[str, list[str]], validated_sources: dict[str, dict], 
                    writing_draft: dict, writing_feedback: dict, llm) -> str:
     model = llm()
@@ -55,7 +52,7 @@ def run_llm_writer(section_name: str, topic: str, outline_object: OutlineContent
         Here is the topic of the report:
         {topic}
         Here is the outline of the report:
-        {outline_object.outline_formatted}
+        {outline_object}
         Here are the section-specific questions:
         {section_questions.get(section_name, "N/A")}
         Here are the validated research sources for the section:

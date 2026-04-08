@@ -1,14 +1,6 @@
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
 
-
-class OutlineSection(BaseModel):
-    title: str = Field(description="Section title")
-    subsections: list[str] = Field(description="Subsections within this section") 
-
-class OutlineContent(BaseModel):
-    outline_formatted: list[OutlineSection] = Field(description="Structured outline for downstream use")
-
 class SectionQuestions(BaseModel):
     section_title: str = Field(description="Title of the section")
     questions: list[str] = Field(description="Focused research questions for this section")

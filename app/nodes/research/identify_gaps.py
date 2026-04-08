@@ -1,6 +1,3 @@
-import json
-import psycopg
-
 from app.config import DATABASE_URL, NUM_RESEARCH_ITERATIONS, NUM_SOURCES_NEEDED_FOR_SECTION
 from app.state.run_state import update_run_state
 

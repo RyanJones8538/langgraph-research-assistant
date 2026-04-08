@@ -1,8 +1,4 @@
-import json
-
-import psycopg
-
-from app.config import DATABASE_URL, DEBUG_MODE, MAX_QUESTIONS_PER_SECTION
+from app.config import DEBUG_MODE, MAX_QUESTIONS_PER_SECTION
 from app.state.run_state import update_run_state
 
 def make_generate_questions(llm):
@@ -12,11 +8,11 @@ def make_generate_questions(llm):
         topic = state["topic"]
         new_questions: dict[str, list[str]] = {}
 
-        for section in approved_outline.outline_formatted:
-            section_questions = make_questions(model, topic, section.title)
-            new_questions[section.title] = section_questions.questions
+        for section_title, subsections in approved_outline.items():
+            section_questions = make_questions(model, topic, section_title)
+            new_questions[section_title] = section_questions.questions
 
-            for subsection in section.subsections:
+            for subsection in subsections:
                 subsection_questions = make_questions(model, topic, subsection)
                 new_questions[subsection] = subsection_questions.questions
 
