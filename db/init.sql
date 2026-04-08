@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS run_state (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     request_id TEXT UNIQUE,
+    thread_id TEXT UNIQUE,
     topic TEXT,
     status TEXT,
     last_completed_node TEXT,

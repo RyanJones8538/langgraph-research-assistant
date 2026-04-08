@@ -14,6 +14,7 @@ def start_run(topic: str, thread_id: str):
 
     initial_state: OutlineState = {
         "request_id": request_id,
+        "thread_id": thread_id,
         "topic": topic,
         "request_messages": [topic],
         "current_outline": "",

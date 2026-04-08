@@ -1,5 +1,3 @@
-import json
-import psycopg
 from typing_extensions import TypedDict
 
 from langgraph.graph import END, START, StateGraph
@@ -13,6 +11,7 @@ from app.state.run_state import update_run_state
 
 class WriterState(TypedDict):
     request_id: str
+    thread_id: str
     topic: str
     outline_object: dict[str, list[str]]
     section_questions: dict[str, list[str]]

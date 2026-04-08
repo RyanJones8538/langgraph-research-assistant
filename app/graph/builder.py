@@ -17,6 +17,7 @@ from app.state.run_state import update_run_state
 
 class OutlineState(TypedDict):
     request_id: str
+    thread_id: str
     topic: str
     request_messages: list[str]
     section_questions: dict[str, list[str]]
@@ -40,22 +41,23 @@ def initialize_run(state: OutlineState, config: RunnableConfig | None = None):
     topic = state.get("topic")
     if not topic:
         raise ValueError("Missing required `topic` in graph state.")
-    
+    create_run_sql(request_id, state.get("thread_id", "unknown_thread"), topic)
     return {
         "request_id": request_id,
         "status": "Initializing Research Assistant",
     }
 
-def create_run_sql(request_id: str, topic: str):
+def create_run_sql(request_id: str, thread_id: str, topic: str):
     try:
         with psycopg.connect(DATABASE_URL) as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    INSERT INTO run_state (request_id, topic, status, created_at, last_updated_at)
+                    INSERT INTO run_state (request_id, thread_id, topic, status, created_at, last_updated_at)
                     VALUES (%s, %s, %s, %s, NOW(), NOW())
                         ON CONFLICT (request_id) DO UPDATE
-                        SET topic = EXCLUDED.topic,
+                        SET thread_id = EXCLUDED.thread_id,
+                            topic = EXCLUDED.topic,
                             status = EXCLUDED.status,
                             last_completed_node = NULL,
                             last_updated_at = NOW()
@@ -63,6 +65,7 @@ def create_run_sql(request_id: str, topic: str):
                     """,
                     (
                         request_id,
+                        thread_id,
                         topic,
                         "Initializing Research Assistant",
                         "initialize"

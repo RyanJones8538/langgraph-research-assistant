@@ -15,6 +15,7 @@ from app.state.run_state import update_run_state
 
 class ResearchState(TypedDict):
     request_id: str
+    thread_id: str
     topic: str
     outline_object: dict[str, list[str]]
     section_questions: dict[str, list[str]]
