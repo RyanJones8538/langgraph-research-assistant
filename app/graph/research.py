@@ -11,6 +11,8 @@ from langgraph.graph import END, START, StateGraph
 from app.config import DATABASE_URL, question_llm, validation_llm
 from typing_extensions import TypedDict
 
+from app.state.run_state import update_run_state
+
 class ResearchState(TypedDict):
     request_id: str
     topic: str
@@ -76,38 +78,11 @@ def initialize_research_state(state):
                     "dropped_sources": [],
                     "coverage_gaps": [],
                 }
-    update_sql_initialize_research_state(0, False, research_state_init, validated_sources, state.get("request_id", ""))
+    update_run_state(state.get("request_id", ), research_iteration=0, should_research_continue=False, research_complete = research_state_init, validated_sources=validated_sources,
+                     status = "Initialized Research Subgraph.", last_node_visited = "initialize_research")
     return {
         "research_iteration": 0,
         "should_continue": False,
         "research_complete": research_state_init,
         "validated_sources": validated_sources
     }
-
-def update_sql_initialize_research_state(research_iteration, should_research_continue, research_complete, validated_sources, request_id):
-    with psycopg.connect(DATABASE_URL) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE run_state
-                SET 
-                    research_iteration = %s,
-                    should_research_continue = %s,
-                    research_complete = %s,
-                    validated_sources = %s,
-                    last_completed_node = %s,
-                    status = %s,
-                    last_updated_at = NOW()
-                WHERE request_id = %s
-                """,
-                (
-                    research_iteration,
-                    should_research_continue,
-                    json.dumps(research_complete),
-                    json.dumps(validated_sources),
-                    "initialize_research",
-                    "Initialized research state.",
-                    request_id,
-                ),
-            )
-        conn.commit()

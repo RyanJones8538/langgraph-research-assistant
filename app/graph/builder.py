@@ -13,6 +13,8 @@ from langgraph.graph import END, START, StateGraph
 from app.config import DATABASE_URL, get_llm, outline_llm
 from typing_extensions import TypedDict
 
+from app.state.run_state import update_run_state
+
 class OutlineState(TypedDict):
     request_id: str
     topic: str
@@ -38,8 +40,7 @@ def initialize_run(state: OutlineState, config: RunnableConfig | None = None):
     topic = state.get("topic")
     if not topic:
         raise ValueError("Missing required `topic` in graph state.")
-
-    create_run_sql(request_id, topic)
+    
     return {
         "request_id": request_id,
         "status": "Initializing Research Assistant",

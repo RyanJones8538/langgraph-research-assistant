@@ -5,6 +5,7 @@ import psycopg
 from app.config import DEBUG_MODE, MAX_SECTIONS, MAX_SUBSECTIONS_PER_SECTION
 
 from app.config import DATABASE_URL
+from app.state.run_state import update_run_state
 
 def render_outline(sections):
     lines = []
@@ -58,7 +59,8 @@ def make_generate_outline(llm):
 
         outline_history = prior_outlines + [outline_text]
 
-        update_sql_outline(outline_text, new_outline, outline_history, review_comment, request_id)
+        update_run_state(request_id, current_outline=outline_text, outline_object=new_outline, outline_history=outline_history, review_comment=review_comment,
+                          status="Generating outline.", last_node_visited="generate_outline")
 
         return {
             "current_outline": outline_text,
@@ -68,36 +70,3 @@ def make_generate_outline(llm):
             "status": "Reviewing user comment.",
         }
     return generate_outline
-
-def update_sql_outline(outline_text, new_outline, outline_history, review_comment, request_id):
-    review_comment_text = (
-        review_comment
-        if isinstance(review_comment, str) or review_comment is None
-        else json.dumps(review_comment)
-    )
-    with psycopg.connect(DATABASE_URL) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE run_state
-                SET 
-                    current_outline = %s,
-                    outline_object = %s,
-                    outline_history = %s,
-                    review_comment = %s,
-                    last_completed_node = %s,
-                    status = %s,
-                    last_updated_at = NOW()
-                WHERE request_id = %s
-                """,
-                (
-                    outline_text,
-                    new_outline.json(),
-                    json.dumps(outline_history),
-                    review_comment_text,
-                    "generate_outline",
-                    "Generating user comment.",
-                    request_id,
-                ),
-            )
-        conn.commit()

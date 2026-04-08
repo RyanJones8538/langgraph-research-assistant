@@ -3,6 +3,7 @@ import json
 import psycopg
 
 from app.config import DATABASE_URL
+from app.state.run_state import update_run_state
 
 def make_parse_review(llm):
     def parse_review(state):
@@ -23,30 +24,8 @@ def make_parse_review(llm):
                 Do not include any additional text or explanation in your response.
                 """
         review_action = model.invoke(prompt).content
-
+        update_run_state(request_id, review_action=review_action, last_completed_node="parse_review", status="Evaluating user comment.")
         return {
             "review_action": review_action
         }
     return parse_review
-
-def update_sql_parse_review(review_action, request_id):
-    with psycopg.connect(DATABASE_URL) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE run_state
-                SET 
-                    review_action = %s,
-                    last_completed_node = %s,
-                    status = %s,
-                    last_updated_at = NOW()
-                WHERE request_id = %s
-                """,
-                (
-                    review_action,
-                    "parse_review",
-                    "Evaluating user comment.",
-                    request_id,
-                ),
-            )
-        conn.commit()

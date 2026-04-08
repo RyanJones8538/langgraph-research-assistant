@@ -8,6 +8,7 @@ from app.config import DATABASE_URL, editor_llm, get_llm
 from app.models.classes import OutlineContent, WritingDrafts, WritingFeedback
 from app.nodes.writer.edit_report import make_edit_report
 from app.nodes.writer.write_report import make_write_report
+from app.state.run_state import update_run_state
 
 
 class WriterState(TypedDict):
@@ -65,33 +66,10 @@ def initialize_writer_state(state):
         for subsection in section.subsections:
             writing_state_init[subsection] = False
 
-    update_sql_initialize_writer_state(0, False, writing_state_init, state.get("request_id", ""))
+    update_run_state(state.get("request_id", ), writing_iteration=0, should_writer_continue=False, writing_complete=writing_state_init,
+                     last_node_visited = "initialize_writer", status = "Initialized Writer Subgraph.")
     return {
         "writing_iteration": 0,
         "should_continue": False,
         "writing_complete": writing_state_init
     }
-
-def update_sql_initialize_writer_state(writing_iteration, should_writer_continue, writing_complete, request_id):
-    with psycopg.connect(DATABASE_URL) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE run_state
-                SET writing_iteration = %s,
-                     should_writer_continue = %s,
-                     writing_complete = %s,
-                     last_completed_node = %s,
-                     status = %s,
-                     last_updated_at = NOW()
-                 WHERE request_id = %s
-                 """,
-                 (
-                    writing_iteration,
-                    should_writer_continue,
-                    json.dumps(writing_complete),
-                    "initialize_writer",
-                    "Initialized writer state.",
-                    request_id,
-                 ),
-             )

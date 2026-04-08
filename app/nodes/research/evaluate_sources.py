@@ -7,6 +7,7 @@ import psycopg
 from app import state
 from app.config import DATABASE_URL
 from app.models.classes import EvaluatedSource, SectionEvidenceResult, SourceItem
+from app.state.run_state import update_run_state
 
 
 BLOCKED_DOMAINS = {
@@ -182,30 +183,8 @@ def make_evaluate_evidence(llm):
                 "dropped_sources": dropped_dicts,
                 "coverage_gaps": result.coverage_gaps,
             }
-        update_sql_evaluate_sources(validated_sources, state.get("request_id", ""))
+        update_run_state(state.get("request_id", ), validated_sources=validated_sources, last_completed_node="evaluate_sources", status="Evaluating quality of sources.")
         return {
             "validated_sources": validated_sources
         }
     return evaluate_evidence
-
-def update_sql_evaluate_sources(validated_sources, request_id):
-    with psycopg.connect(DATABASE_URL) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE run_state
-                SET 
-                    validated_sources = %s,
-                    last_completed_node = %s,
-                    status = %s,
-                    last_updated_at = NOW()
-                WHERE request_id = %s
-                """,
-                (
-                    json.dumps(validated_sources),
-                    "evaluate_sources",
-                    "Evaluated quality of sources.",
-                    request_id,
-                ),
-            )
-        conn.commit()

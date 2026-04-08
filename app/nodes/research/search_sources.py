@@ -5,6 +5,8 @@ from app.config import DATABASE_URL, MAX_RESULTS_PER_QUERY
 from langchain_tavily import TavilySearch
 from urllib.parse import urlparse
 
+from app.state.run_state import update_run_state
+
 def make_search_sources():
     search = TavilySearch(max_results=MAX_RESULTS_PER_QUERY)
 
@@ -96,29 +98,7 @@ def make_search_sources():
                         "sources_by_question": sources_by_gap,
                         "all_sources": all_sources,
                     }
-        update_sql_search_sources(new_sources, state.get("request_id", ""))
+        update_run_state(state.get("request_id", ), candidate_sources=new_sources, last_completed_node="search_sources", status="Searched for sources.")
         return {"candidate_sources": new_sources}
 
     return search_sources
-
-def update_sql_search_sources(candidate_sources, request_id):
-    with psycopg.connect(DATABASE_URL) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE run_state
-                SET 
-                    candidate_sources = %s,
-                    last_completed_node = %s,
-                    status = %s,
-                    last_updated_at = NOW()
-                WHERE request_id = %s
-                """,
-                (
-                    json.dumps(candidate_sources),
-                    "search_sources",
-                    "Searched for sources.",
-                    request_id,
-                ),
-            )
-        conn.commit()

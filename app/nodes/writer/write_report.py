@@ -3,6 +3,7 @@ import psycopg
 
 from app.config import DATABASE_URL
 from app.models.classes import OutlineContent
+from app.state.run_state import update_run_state
 
 
 def make_write_report(llm):
@@ -26,7 +27,7 @@ def make_write_report(llm):
                 if(writing_complete.get(subsection) != True):
                     subsection_text = run_llm_writer(subsection, topic, outline_object, section_questions, validated_sources, writing_draft, writing_feedback, llm)
                     section_drafts[subsection] = subsection_text
-        update_sql_write_report(section_drafts, state.get("request_id", ""))
+        update_run_state(state.get("request_id", ), writing_draft={"section_drafts": section_drafts}, last_completed_node="writer", status="Completed writing iteration.")
         return {
             "writing_draft": {
                 "section_drafts": section_drafts,
@@ -72,23 +73,3 @@ def run_llm_writer(section_name: str, topic: str, outline_object: OutlineContent
     if isinstance(result, str):
         return result
     return str(getattr(result, "content", result))
-
-def update_sql_write_report(section_drafts, request_id):
-    with psycopg.connect(DATABASE_URL) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE run_state
-                SET writing_draft = %s,
-                     last_completed_node = %s,
-                     status = %s,
-                     last_updated_at = NOW()
-                WHERE request_id = %s
-                """,
-                (
-                    json.dumps(section_drafts), 
-                    "writer",
-                    "Completed writing iteration.",
-                    request_id
-                )
-            )

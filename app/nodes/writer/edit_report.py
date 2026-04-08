@@ -3,6 +3,7 @@ import psycopg
 
 from app.config import DATABASE_URL, NUM_WRITING_ITERATIONS
 from app.models.classes import WritingDrafts, WritingFeedback
+from app.state.run_state import update_run_state
 
 
 def make_edit_report(llm):
@@ -28,6 +29,9 @@ def make_edit_report(llm):
                 if writing_complete.get(subsection) != True:
                     section_feedback[subsection] = run_llm_editor(subsection, section_questions.get(subsection, []), section_drafts.get(subsection, "N/A"), llm)
                     writing_complete[subsection] = bool(section_feedback[subsection].get("pass_or_fail", False))
+        update_run_state(state.get("request_id", ), writing_iteration=number_of_iterations, should_writer_continue=should_writer_continue, 
+                         writing_complete=writing_complete, writing_feedback={"section_feedback": section_feedback}, last_completed_node="editor", 
+                         status="Edited report and provided feedback.")
         return {
             "writing_iteration": number_of_iterations,
             "should_writer_continue": should_writer_continue,
@@ -62,29 +66,3 @@ def run_llm_editor(section_name: str, section_questions: list[str], section_draf
     if isinstance(result, dict):
         return result
     return {"feedback": [str(getattr(result, "content", result))], "pass_or_fail": False}
-
-def update_sql_edit_report(writing_iteration, should_writer_continue, writing_complete, writing_feedback, request_id):
-    with psycopg.connect(DATABASE_URL) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE run_state
-                SET writing_iteration = %s,
-                     should_writer_continue = %s,
-                     writing_complete = %s,
-                     writing_feedback = %s,
-                     last_completed_node = %s,
-                     status = %s,
-                     last_updated_at = NOW()
-                WHERE request_id = %s
-                """,
-                (
-                    writing_iteration,
-                    should_writer_continue,
-                    json.dumps(writing_complete),
-                    json.dumps(writing_feedback.section_feedback),
-                    "editor",
-                    "Edited report and providing feedback.",
-                    request_id
-                )
-            )
