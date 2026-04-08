@@ -85,7 +85,7 @@ def handle_invalid_review(state):
     }
 
 def route_review(state):
-    action = state["review_action"]
+    action = str(state.get("review_action", "")).strip().lower().strip("\"'")
 
     if action == "cancel":
         return "cancelled"

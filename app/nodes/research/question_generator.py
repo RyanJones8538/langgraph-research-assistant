@@ -1,4 +1,8 @@
-from app.config import DEBUG_MODE, MAX_QUESTIONS_PER_SECTION
+import json
+
+import psycopg
+
+from app.config import DATABASE_URL, DEBUG_MODE, MAX_QUESTIONS_PER_SECTION
 
 def make_generate_questions(llm):
     def generate_questions(state):
@@ -15,8 +19,7 @@ def make_generate_questions(llm):
                 subsection_questions = make_questions(model, topic, subsection)
                 new_questions[subsection] = subsection_questions.questions
 
-        print("\n[generate_questions OUTPUT]")
-        print(new_questions)
+        update_generate_questions(new_questions, state.get("request_id", ""))
         return {
             "section_questions": new_questions,
         }
@@ -38,3 +41,25 @@ def make_questions(model, topic, section):
              + " questions per section." if DEBUG_MODE else "Generate as many focused questions as needed for solid source coverage."}
             """
     return model.invoke(prompt)
+
+def update_generate_questions(section_questions, request_id):
+    with psycopg.connect(DATABASE_URL) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE run_state
+                SET 
+                    section_questions = %s,
+                    last_completed_node = %s,
+                    status = %s,
+                    last_updated_at = NOW()
+                WHERE request_id = %s
+                """,
+                (
+                    json.dumps(section_questions),
+                    "generate_questions",
+                    "Generated research questions.",
+                    request_id,
+                ),
+            )
+        conn.commit()

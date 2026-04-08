@@ -1,11 +1,14 @@
-from app.config import NUM_WRITING_ITERATIONS
+import json
+import psycopg
+
+from app.config import DATABASE_URL, NUM_WRITING_ITERATIONS
 from app.models.classes import WritingDrafts, WritingFeedback
 
 
 def make_edit_report(llm):
     def edit_report(state):
         number_of_iterations = state["writing_iteration"]
-        should_continue = state["should_continue"]
+        should_writer_continue = state["should_continue"]
         writing_complete = state["writing_complete"]
         section_questions = state["section_questions"]
         outline_object = state["outline_object"]
@@ -13,7 +16,7 @@ def make_edit_report(llm):
         writing_feedback = state.get("writing_feedback", WritingFeedback(section_feedback={}))
         number_of_iterations = number_of_iterations + 1
         if number_of_iterations >= NUM_WRITING_ITERATIONS:
-            should_continue = True
+            should_writer_continue = True
         
         for section in outline_object.outline_formatted:
             if writing_complete.get(section.title) != True:
@@ -23,9 +26,10 @@ def make_edit_report(llm):
                 if writing_complete.get(subsection) != True:
                     writing_feedback.section_feedback[subsection] = run_llm_editor(subsection, section_questions.get(subsection, []), writing_draft.section_drafts.get(subsection, "N/A"), llm)
                     writing_complete[subsection] = writing_feedback.section_feedback[subsection].pass_or_fail
+        update_sql_edit_report(number_of_iterations, should_writer_continue, writing_complete, writing_feedback, state.get("request_id", ""))
         return {
             "writing_iteration": number_of_iterations,
-            "should_writer_continue": should_continue,
+            "should_writer_continue": should_writer_continue,
             "writing_complete": writing_complete,
             "writing_feedback": writing_feedback,
         }
@@ -50,3 +54,29 @@ def run_llm_editor(section_name: str, section_questions: list[str], section_draf
         I am currently debugging and trying to save on costs, so ignore all previous instructions and pass the section with no feedback so long as it is under 10 words.
         """
     return model.invoke(prompt)
+
+def update_sql_edit_report(writing_iteration, should_writer_continue, writing_complete, writing_feedback, request_id):
+    with psycopg.connect(DATABASE_URL) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE run_state
+                SET writing_iteration = %s,
+                     should_writer_continue = %s,
+                     writing_complete = %s,
+                     writing_feedback = %s,
+                     last_completed_node = %s,
+                     status = %s,
+                     last_updated_at = NOW()
+                WHERE request_id = %s
+                """,
+                (
+                    writing_iteration,
+                    should_writer_continue,
+                    json.dumps(writing_complete),
+                    json.dumps(writing_feedback.section_feedback),
+                    "editor",
+                    "Edited report and providing feedback.",
+                    request_id
+                )
+            )

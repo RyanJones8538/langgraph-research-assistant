@@ -1,8 +1,10 @@
+import json
+import psycopg
 from typing_extensions import TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from app.config import editor_llm, get_llm
+from app.config import DATABASE_URL, editor_llm, get_llm
 from app.models.classes import OutlineContent, SectionEvidenceResult, WritingDrafts, WritingFeedback
 from app.nodes.writer.edit_report import make_edit_report
 from app.nodes.writer.write_report import make_write_report
@@ -39,12 +41,12 @@ def route_writer(state):
 def build_writer_graph():
     builder = StateGraph(WriterState)
 
-    builder.add_node("initialize", initialize_writer_state)
+    builder.add_node("initialize_writer", initialize_writer_state)
     builder.add_node("writer", make_write_report(get_llm))
     builder.add_node("editor", make_edit_report(editor_llm))
 
-    builder.add_edge(START, "initialize")
-    builder.add_edge("initialize", "writer")
+    builder.add_edge(START, "initialize_writer")
+    builder.add_edge("initialize_writer", "writer")
     builder.add_edge("writer", "editor")
     builder.add_conditional_edges(
         "editor", 
@@ -67,3 +69,27 @@ def initialize_writer_state(state):
         "should_continue": False,
         "writing_complete": writing_state_init
     }
+
+def update_sql_initialize_writer_state(writing_iteration, should_continue, writing_complete, request_id):
+    with psycopg.connect(DATABASE_URL) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE run_state
+                SET writing_iteration = %s,
+                     should_writer_continue = %s,
+                     writing_complete = %s,
+                     last_completed_node = %s,
+                     status = %s,
+                     last_updated_at = NOW()
+                 WHERE request_id = %s
+                 """,
+                 (
+                    writing_iteration,
+                    should_continue,
+                    json.dumps(writing_complete),
+                    "initialize_writer",
+                    "Initialized writer state.",
+                    request_id,
+                 ),
+             )

@@ -1,3 +1,5 @@
+import json
+
 from langgraph.types import interrupt
 import psycopg
 from app.config import DEBUG_MODE, MAX_SECTIONS, MAX_SUBSECTIONS_PER_SECTION
@@ -22,7 +24,7 @@ def make_generate_outline(llm):
         messages = state.get("request_messages", [])
         review_comment = state.get("review_comment", "")
         prior_outlines = state.get("outline_history", [])
-        request_id = state["request_id"]
+        request_id = state.get("request_id", "")
 
         prompt = f"""
                 You are generating a research outline.
@@ -68,6 +70,11 @@ def make_generate_outline(llm):
     return generate_outline
 
 def update_sql_outline(outline_text, new_outline, outline_history, review_comment, request_id):
+    review_comment_text = (
+        review_comment
+        if isinstance(review_comment, str) or review_comment is None
+        else json.dumps(review_comment)
+    )
     with psycopg.connect(DATABASE_URL) as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -86,10 +93,10 @@ def update_sql_outline(outline_text, new_outline, outline_history, review_commen
                 (
                     outline_text,
                     new_outline.json(),
-                    outline_history,
-                    review_comment,
+                    json.dumps(outline_history),
+                    review_comment_text,
                     "generate_outline",
-                    "Reviewing user comment.",
+                    "Generating user comment.",
                     request_id,
                 ),
             )
