@@ -4,6 +4,7 @@ version = "0.1.0"
 dependencies = [
   "langgraph",
   "langgraph-cli[inmem]",
+  "langgraph-checkpoint-postgres",
   "langchain",
   "langchain-openai",
   "langchain-tavily",

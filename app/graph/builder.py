@@ -5,11 +5,11 @@ from uuid_utils import uuid4
 
 from app.graph.research import build_research_graph
 from app.graph.writer import build_writer_graph
-from app.models.classes import SectionEvidenceResult
 from app.nodes.outline.outline import make_generate_outline
 from app.nodes.outline.parse_review import make_parse_review
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
+from langgraph.checkpoint.postgres import PostgresSaver
 from app.config import DATABASE_URL, get_llm
 from typing_extensions import TypedDict
 
@@ -129,6 +129,10 @@ def build_graph():
     )
     builder.add_edge("research_graph", "writer_graph")
     builder.add_edge("writer_graph", END)
+
+    with PostgresSaver.from_conn_string(DATABASE_URL) as checkpointer:
+        checkpointer.setup()  # creates checkpoint tables if needed
+        graph = builder.compile(checkpointer=checkpointer)
 
     return builder.compile()
 
