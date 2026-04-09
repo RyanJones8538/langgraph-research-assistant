@@ -9,11 +9,26 @@ from psycopg.sql import Composable
 
 
 def _serialize_value(value):
+    """
+    Serializes a value for storage in Postgres. If the value is a dictionary or list, it converts it to a JSON string. Otherwise, it returns the value as is.
+    Args:
+        value: The value to serialize.
+    Returns:
+        The serialized value.
+    """
     if isinstance(value, (dict, list)):
         return json.dumps(value)
     return value
 
 def _connect_with_host_fallback() -> Connection:
+    """
+    Attempts to connect to the Postgres database using the DATABASE_URL. 
+    If it encounters an OperationalError that indicates a failure to resolve the host (which can happen in certain environments like Docker),
+      it modifies the DATABASE_URL to replace the host with "localhost" and tries to connect again. 
+      This provides a fallback mechanism for connecting to the database in different deployment scenarios.
+    Returns:
+        Connection to PostgresSQL database.
+    """
     try:
         return psycopg.connect(DATABASE_URL)
     except psycopg.OperationalError as exc:
@@ -24,6 +39,15 @@ def _connect_with_host_fallback() -> Connection:
         return psycopg.connect(fallback_url)
     
 def update_run_state(request_id: str, **fields):
+    """
+    Updates the run state in Postgres for a given request_id with the provided fields. 
+    It first attempts to update the existing row for the request_id, and if no rows are updated (which could happen if the initialize row was missing), 
+    it performs an upsert to create or update the row as needed.
+    Args:
+        request_id: The unique identifier for the run, used to locate the correct row in the run_state table.
+        **fields: Arbitrary keyword arguments representing the fields to update in the run_state. 
+        The keys should correspond to column names in the run_state table, and the values will be serialized and stored in those columns.
+    """
     if not request_id:
         raise RuntimeError("Missing request_id while updating run_state.")
     if not fields:

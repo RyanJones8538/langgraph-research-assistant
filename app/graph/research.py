@@ -1,14 +1,10 @@
-import json
-
-import psycopg
-
 from app.models.classes import SectionResearchCandidates
 from app.nodes.research.evaluate_sources import make_evaluate_evidence
 from app.nodes.research.identify_gaps import make_identify_gaps
 from app.nodes.research.question_generator import make_generate_questions
 from app.nodes.research.search_sources import make_search_sources
 from langgraph.graph import END, START, StateGraph
-from app.config import DATABASE_URL, question_llm, validation_llm
+from app.config import question_llm, validation_llm
 from typing_extensions import TypedDict
 
 from app.state.run_state import update_run_state
@@ -27,6 +23,13 @@ class ResearchState(TypedDict):
 
 
 def route_research(state):
+    """
+    Routes to either end of graph or back to search sources based on whether research is complete or if another iteration of research is needed.
+    Args:
+        state: The current state of the graph.
+    Returns:
+        String which corresponds to the next node to route to, either "continue" or "retry"
+    """
     should_continue = state["should_research_continue"]
 
     if should_continue == True:
@@ -35,6 +38,13 @@ def route_research(state):
     
 
 def build_research_graph():
+    """
+    Builds the research subgraph for the Research Assistant, which includes generating questions for each section of the outline, 
+    searching for sources based on those questions, evaluating the sources, and identifying gaps in coverage. 
+    The graph will route back to searching for sources if there are gaps that need to be filled, or route to the end if research is complete.
+    Returns:
+        Research subgraph.
+    """
     builder = StateGraph(ResearchState)
     
     # Generate Graph Nodes
@@ -61,6 +71,14 @@ def build_research_graph():
     return builder.compile()
 
 def initialize_research_state(state):
+    """
+    Sets initial values for research state, including initializing research_complete to False for each section and subsection in the outline, and empty lists of validated sources. 
+    Also updates run state in Postgres with these initial values.
+    Args:
+        state: The current state of the graph.
+    Returns:
+        Default values for research state.
+    """
     research_state_init: dict[str, bool] = {}
     outline_object = state.get("outline_object")
     validated_sources: dict[str, dict] = {}

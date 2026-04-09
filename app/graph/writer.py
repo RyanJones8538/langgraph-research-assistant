@@ -3,7 +3,6 @@ from typing_extensions import TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from app.config import DATABASE_URL, editor_llm, get_llm
-from app.models.classes import WritingDrafts, WritingFeedback
 from app.nodes.writer.edit_report import make_edit_report
 from app.nodes.writer.write_report import make_write_report
 from app.state.run_state import update_run_state
@@ -23,6 +22,13 @@ class WriterState(TypedDict):
     writing_complete: dict[str, bool]
 
 def route_writer(state):
+    """
+    Analyzes completeness of writing, and routes to either end of graph if writing is complete or back to writer node if not complete.
+    Args:
+        state: The current state of the graph.
+    Returns:
+        String corresponding to the next node to route to, either "continue" or "retry"
+    """
     should_continue = state["should_writer_continue"]
     writing_complete = state["writing_complete"]
 
@@ -39,6 +45,13 @@ def route_writer(state):
     return "retry"
 
 def build_writer_graph():
+    """
+    Builds writer subgraph for Research Assistant, which includes writing a draft report based on the outline and research, 
+    and then editing that report based on user feedback. The graph will route back to writing if the edited report is not complete, 
+    or route to the end if it is complete.
+    Returns:
+        Writer subgraph.
+    """
     builder = StateGraph(WriterState)
 
     builder.add_node("initialize_writer", initialize_writer_state)
@@ -58,6 +71,15 @@ def build_writer_graph():
     return builder.compile()
 
 def initialize_writer_state(state):
+    """
+    Initializes the writer state by setting up a dictionary to track which sections and subsections of the outline are complete, 
+    and empty dictionaries for the writing draft and feedback. 
+    It also updates the run state in Postgres with these initial values.
+    Args:
+        state: The current state of the graph.
+    Returns:
+        Initialized writer state.
+    """
     writing_state_init: dict[str, bool] = {}
     outline_object = state.get("outline_object")
     request_id = state.get("request_id", "")

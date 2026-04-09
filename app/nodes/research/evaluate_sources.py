@@ -1,7 +1,5 @@
 from urllib.parse import urlparse
 
-from app import state
-from app.config import DATABASE_URL
 from app.models.classes import EvaluatedSource, SourceItem
 from app.state.run_state import update_run_state
 
@@ -16,12 +14,28 @@ BLOCKED_DOMAINS = {
 }
 
 def normalize_domain(url: str) -> str:
+    """
+    Normalizes a URL to extract the domain, and handles cases where the URL may be malformed or missing. 
+    If the URL is invalid or the domain cannot be extracted, it returns an empty string.
+    Args:
+        url: The URL to normalize.
+    Returns:
+        normalized domain string extracted from the URL, or an empty string if the URL is invalid or the domain cannot be extracted.
+    """
     try:
         return urlparse(url).netloc.lower()
     except Exception:
         return ""
     
 def dedupe_sources(sources: list[SourceItem]) -> list[EvaluatedSource]:
+    """
+    Removes duplicate sources based on their URLs, and normalizes the source information into EvaluatedSource objects. 
+    It also handles cases where the URL may be missing or empty, and ensures that the domain is extracted for each source.
+    Args:
+        sources: A list of SourceItem objects.
+    Returns:
+        A list of unique EvaluatedSource objects.
+    """
     seen_urls = set()
     deduped = []
 
@@ -47,6 +61,14 @@ def remove_previously_kept_sources(
     prelim_kept: list[EvaluatedSource],
     previous_kept: list,
 ) -> list[EvaluatedSource]:
+    """
+    Removes sources that were previously kept in earlier iterations of research to avoid redundant evaluation by the LLM.
+    Args:
+        prelim_kept: The list of sources that have preliminarily passed deterministic filtering in the current iteration.
+        previous_kept: The list of sources that were kept in previous iterations.
+    Returns:
+        A filtered list of EvaluatedSource objects that excludes any sources that were previously kept.
+    """
     previous_urls = set()
     for source in previous_kept:
         if isinstance(source, dict):
@@ -58,6 +80,13 @@ def remove_previously_kept_sources(
     return [source for source in prelim_kept if source.url.strip() not in previous_urls]
 
 def deterministic_filter(sources: list[EvaluatedSource]) -> tuple[list[EvaluatedSource], list[EvaluatedSource]]:
+    """
+    Filters sources based on deterministic criteria to reduce the number of sources that need to be evaluated by the LLM.
+    Args:
+        sources: A list of EvaluatedSource objects that have been deduplicated.
+    Returns:
+        A tuple containing the list of kept sources and the list of dropped sources.
+    """
     kept = []
     dropped = []
 
@@ -98,7 +127,22 @@ def deterministic_filter(sources: list[EvaluatedSource]) -> tuple[list[Evaluated
     return kept, dropped
 
 def make_evaluate_evidence(llm):
+    """
+    Wrapper function for evaluate_sources node, which takes in the candidate sources for each section and uses the LLM to evaluate their relevance, 
+    reliability, and whether they should be kept for writing.
+    Args:
+        llm: The language model to use for evaluating the sources.
+    Returns:
+        evaluate_evidence function, which can be used as a node in the graph.
+    """
     def evaluate_evidence(state):
+        """
+        Creates the evaluate_evidence node.
+        Args:
+            state: The current state of the graph.
+        Returns:
+            Evaluation results for the sources, including which sources to keep and which to drop.
+        """
         model = llm()
 
         topic = state["topic"]

@@ -13,8 +13,6 @@ from langgraph.checkpoint.postgres import PostgresSaver
 from app.config import DATABASE_URL, get_llm
 from typing_extensions import TypedDict
 
-from app.state.run_state import update_run_state
-
 class OutlineState(TypedDict):
     request_id: str
     thread_id: str
@@ -30,6 +28,14 @@ class OutlineState(TypedDict):
     status: str
 
 def initialize_run(state: OutlineState, config: RunnableConfig | None = None):
+    """
+    Initialize state of graph.
+    Args:
+        state: the current state of the graph.
+        config: the RunnableConfig passed in from graph invoke, used to get request_id if it exists.
+    Returns:
+        Initialized values.
+    """
     #RunnableConfig passed in from graph invoke to get request_id if it exists, otherwise generate a new one
     request_id = state.get("request_id")
     if not request_id and config:
@@ -48,6 +54,13 @@ def initialize_run(state: OutlineState, config: RunnableConfig | None = None):
     }
 
 def create_run_sql(request_id: str, thread_id: str, topic: str):
+    """
+    Stores initial data for run in Postgres.
+    Args:
+        request_id: the unique identifier for this run, used for saving and fetching state from Postgres.
+        thread_id: the thread_id to associate with this run, used for resuming later.
+        topic: the topic to search for.
+    """
     try:
         with psycopg.connect(DATABASE_URL) as conn:
             with conn.cursor() as cur:
@@ -86,11 +99,23 @@ def create_run_sql(request_id: str, thread_id: str, topic: str):
         raise
 
 def handle_invalid_review(state):
+    """
+    Handles what to do if user reply to interrupt is not valid (not approve, cancel, or revise).
+    Returns:
+        sets status to invalid review
+    """
     return {
         "status": "invalid_review"
     }
 
 def route_review(state):
+    """
+    Receives the analysis of user review from parse_review node and routes to the correct next node based on whether user approved, cancelled, or requested revision.
+    Args:
+        state: The current state of the graph.
+    Returns:
+        string which corresponds to the next node to route to, either "cancelled", "approved", "revise", or "invalid_review"
+    """
     action = str(state.get("review_action", "")).strip().lower().strip("\"'")
 
     if action == "cancel":
@@ -103,6 +128,11 @@ def route_review(state):
         return "invalid_review"
 
 def build_graph():
+    """
+    Builds main graph for Research Assistant.
+    Returns:
+        Builder graph.
+    """
     builder = StateGraph(OutlineState)
 
     # Generate Graph Nodes

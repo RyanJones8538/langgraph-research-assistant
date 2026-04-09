@@ -2,7 +2,21 @@ from app.config import DEBUG_MODE, MAX_QUESTIONS_PER_SECTION
 from app.state.run_state import update_run_state
 
 def make_generate_questions(llm):
+    """
+    Wrapper function for generate_questions node, which generates questions based on the topic and approved outline sections.
+    Args:
+        llm: The language model to use for generating the questions.
+    Returns:
+        generate_questions function, which can be used as a node in the graph.
+    """
     def generate_questions(state):
+        """
+        Create generate_questions node, which takes in the approved outline sections and generates research questions for each section using the LLM.
+        Args:
+            state: The current state of the graph.
+        Returns:
+            Questions for each section of the outline, which will be used for searching for sources in the next node of the graph.
+        """
         model = llm()
         approved_outline = state["outline_object"]
         topic = state["topic"]
@@ -23,6 +37,15 @@ def make_generate_questions(llm):
     return generate_questions
 
 def make_questions(model, topic, section):
+    """
+    Runs LLM to generate research questions for a given section of the outline, based on the overall research topic.
+    Args:
+        model: The language model to use for generating the questions.
+        topic: The overall research topic.
+        section: The specific section of the outline for which to generate questions.
+    Returns:
+        LLM output containing the generated questions for the given section.
+    """
     prompt = f"""
             You are generating research questions based on sections of an approved outline about {topic}.
 

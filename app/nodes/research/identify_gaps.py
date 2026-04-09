@@ -1,9 +1,23 @@
-from app.config import DATABASE_URL, NUM_RESEARCH_ITERATIONS, NUM_SOURCES_NEEDED_FOR_SECTION
+from app.config import NUM_RESEARCH_ITERATIONS, NUM_SOURCES_NEEDED_FOR_SECTION
 from app.state.run_state import update_run_state
 
 
 def make_identify_gaps():
+    """
+    Wrapper function to create identify_gaps node for research graph. 
+    This node analyzes the evaluated sources for each section and determines if there are any gaps in the research that need to be filled by another iteration of searching for sources. 
+    It updates the run state with the current iteration of research, whether research should continue, and which sections are complete.
+    Returns:
+        identify_gaps function, which can be used as a node in the research graph.
+    """
     def identify_gaps(state):
+        """
+        Identify gaps in the research based on the evaluated sources and update the run state accordingly.
+        Args:
+            state: The current state of the graph.
+        Returns:
+            Iteration of research, whether research should continue, and which sections are complete.
+        """
         evaluated_sources = state.get("validated_sources", {})
         number_of_research_runs = state.get("research_iteration", 0)
         research_complete = state.get("research_complete", {})

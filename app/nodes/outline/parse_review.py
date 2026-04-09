@@ -1,12 +1,21 @@
-import json
-
-import psycopg
-
-from app.config import DATABASE_URL
 from app.state.run_state import update_run_state
 
 def make_parse_review(llm):
+    """
+    Wrapper function for parse_review node, which takes in the user's review comment and uses the LLM to classify it into one of three categories: approve, cancel, or revise.
+    Args:
+        llm: The language model to use for parsing the review comment.
+    Returns:
+        parse_review function, which can be used as a node in the graph.
+    """
     def _normalize_review_comment(review_comment) -> str:
+        """
+        Normalizes the review comment to a lowercase string for easier parsing. Handles cases where the review comment may be a string, a dictionary (e.g. from UI payloads), or None.
+        Args:
+            review_comment: The raw review comment from the user, which may be in various formats.
+        Returns:
+            Normalized review comment as a lowercase string, or an empty string if the input is None or cannot be parsed.
+        """
         if review_comment is None:
             return ""
         if isinstance(review_comment, str):
@@ -19,6 +28,14 @@ def make_parse_review(llm):
         return str(review_comment).strip().lower()
     
     def parse_review(state):
+        """
+        Parse user comment to determine how to proceed in the graph. It first checks for clear signals in the comment to classify it without needing the LLM, 
+        such as "approve", "cancel", or "revise". If it cannot classify based on keywords, it then prompts the LLM to classify the comment. Finally, it updates the run state in Postgres with the determined review action.
+        Args:
+            review_comment: The raw review comment from the user, which may be in various formats.
+        Returns:
+            review_action: A string indicating the user's intent, either "approve", "cancel", "revise", or "invalid_review".
+        """
         model = llm()
         review_comment = state.get("review_comment")
         request_id = state.get("request_id", "")

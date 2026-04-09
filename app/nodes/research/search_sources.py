@@ -1,16 +1,30 @@
-import psycopg
-import json
-
-from app.config import DATABASE_URL, MAX_RESULTS_PER_QUERY
+from app.config import MAX_RESULTS_PER_QUERY
 from langchain_tavily import TavilySearch
 from urllib.parse import urlparse
 
 from app.state.run_state import update_run_state
 
 def make_search_sources():
+    """
+    Wrapper function to create search_sources node for research graph.
+    This node takes the research questions generated for each section of the outline and searches for sources using the TavilySearch tool. 
+    In the first iteration of research, it searches based on the questions. 
+    In subsequent iterations, it searches based on the identified gaps in research from the previous iteration.
+    Returns:
+        search_sources function, which can be used as a node in the research graph.
+    """
     search = TavilySearch(max_results=MAX_RESULTS_PER_QUERY)
 
     def search_sources(state):
+        """
+        Creates search_sources node, which takes in the research questions for each section of the outline and searches for sources using the TavilySearch tool.
+        In the first iteration of research, it searches based on the questions.
+        In subsequent iterations, it searches based on the identified gaps in research from the previous iteration.
+        Args:
+            state: The current state of the graph.
+        Returns:
+            list of candidate sources for each section of the outline, which will be evaluated in the next node of the graph.
+        """
         section_questions = state["section_questions"]
         research_iteration = state.get("research_iteration")
         new_sources = {}

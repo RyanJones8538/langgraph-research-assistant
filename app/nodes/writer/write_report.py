@@ -1,8 +1,23 @@
 from app.state.run_state import update_run_state
 
-
 def make_write_report(llm):
+    """
+    Wrapper function to create write_report node for writer graph.
+    This node takes in the outline, research sources, and section-specific questions, and generates a draft report for each section of the outline. 
+    The draft report is then evaluated in the next node of the graph, where feedback is provided and a pass/fail evaluation is given for each section.
+    Args:
+        llm: The language model to use for writing the report.
+    Returns:
+        write_report function, which can be used as a node in the writer graph.
+    """
     def write_report(state):
+        """
+        Writes a draft report for each section of the outline based on the research sources and section-specific questions, and updates the state with the draft report.
+        Args:
+            state: The current state of the graph.
+        Returns:
+            Draft report for each section of the outline, which will be evaluated in the next node of the graph.
+        """
         outline_object = state["outline_object"]
         writing_draft = state.get("writing_draft", {"section_drafts": {}})
         writing_feedback = state.get("writing_feedback", {"section_feedback": {}})
