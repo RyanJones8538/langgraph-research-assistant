@@ -4,11 +4,16 @@ from app.graph.builder import build_graph, OutlineState
 from uuid import uuid4
 from langgraph.types import Command
 
+from fastapi import FastAPI
+
 
 load_dotenv()
 
+app = FastAPI()
+
 graph = build_graph()
 
+@app.post("/start_run")
 def start_run(topic: str, thread_id: str):
     """
     Starts run of Research Assistant graph with given topic and thread_id. Saves initial state to Postgres and returns first response from graph, which should be an interrupt waiting for user feedback.
@@ -45,6 +50,7 @@ def start_run(topic: str, thread_id: str):
         },
     )
 
+@app.post("/resume_run")
 def resume_run(thread_id: str, user_reply: str):
     """
     Resumes a previously started run of research assistant graph by invoking with a user reply to the interrupt. The graph will fetch the most recent state from Postgres based on thread_id and resume execution.
