@@ -1,8 +1,9 @@
 export default function VariableDisplay({ variables }) {
   return (
-    <div className="variable-display">
-      <h2>Current Variables:</h2>
+    <section>
+      <h2>Graph State</h2>
+      <p>Track request identity and iteration counters from graph state.</p>
       <pre>{JSON.stringify(variables, null, 2)}</pre>
-    </div>
+    </section>
   );
 }

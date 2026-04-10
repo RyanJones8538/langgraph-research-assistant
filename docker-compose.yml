@@ -13,6 +13,11 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U researchuser -d researchdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   backend:
     build:
@@ -20,12 +25,17 @@ services:
       dockerfile: Dockerfile
     container_name: research-backend
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     env_file:
       - .env
     environment:
       DB_HOST: db
       DB_PORT: 5432
+      DB_NAME: researchdb
+      DB_USER: researchuser
+      DB_PASSWORD: researchpassword
+      DATABASE_URL: postgresql://researchuser:researchpassword@db:5432/researchdb
     ports:
       - "2024:2024"
 

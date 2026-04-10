@@ -1,3 +1,4 @@
+fastapi
 langgraph
 langgraph-cli[inmem]
 langgraph-checkpoint-postgres
@@ -7,3 +8,4 @@ langchain-tavily
 psycopg[binary]
 python-dotenv
 openai
+uvicorn

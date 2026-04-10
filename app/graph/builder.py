@@ -25,6 +25,7 @@ class OutlineState(TypedDict):
     review_action: str | None
     review_comment: str | None
     validated_sources: dict[str, dict]
+    writing_draft: dict
     status: str
 
 def initialize_run(state: OutlineState, config: RunnableConfig | None = None):
@@ -66,8 +67,8 @@ def create_run_sql(request_id: str, thread_id: str, topic: str):
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    INSERT INTO run_state (request_id, thread_id, topic, status, created_at, last_updated_at)
-                    VALUES (%s, %s, %s, %s, NOW(), NOW())
+                    INSERT INTO run_state (request_id, thread_id, topic, status, last_completed_node, created_at, last_updated_at)
+                    VALUES (%s, %s, %s, %s, %s, NOW(), NOW())
                         ON CONFLICT (request_id) DO UPDATE
                         SET thread_id = EXCLUDED.thread_id,
                             topic = EXCLUDED.topic,
@@ -81,7 +82,7 @@ def create_run_sql(request_id: str, thread_id: str, topic: str):
                         thread_id,
                         topic,
                         "Initializing Research Assistant",
-                        "initialize"
+                        "initialize",
                     ),
                 )
                 if cur.rowcount != 1:
@@ -164,7 +165,7 @@ def build_graph():
         checkpointer.setup()  # creates checkpoint tables if needed
         graph = builder.compile(checkpointer=checkpointer)
 
-    return builder.compile()
+    return graph
 
 
 graph = build_graph()

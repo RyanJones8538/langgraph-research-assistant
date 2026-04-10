@@ -1,23 +1,24 @@
-const API_BASE ="/api";
+const API_BASE = "/api";
 
-const startRun = async (topic, threadId) => {
-  const response = await fetch(`${API_BASE}/start_run`, {
+async function postJson(path, body) {
+  const response = await fetch(`${API_BASE}${path}`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
     },
-    body: JSON.stringify({ topic, thread_id: threadId })
+    body: JSON.stringify(body),
   });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Request failed (${response.status}): ${text}`);
+  }
   return response.json();
-};
+}
 
-const resumeRun = async (threadId, userReply) => {
-  const response = await fetch(`${API_BASE}/resume_run`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ thread_id: threadId, user_reply: userReply })
-  });
-  return response.json();
-};
+export function startRun(topic, threadId) {
+  return postJson("/start_run", { topic, thread_id: threadId });
+}
+
+export function resumeRun(threadId, userReply) {
+  return postJson("/resume_run", { thread_id: threadId, user_reply: userReply });
+}
