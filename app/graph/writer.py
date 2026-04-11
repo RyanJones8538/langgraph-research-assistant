@@ -2,7 +2,7 @@ from typing_extensions import TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from app.config import DATABASE_URL, editor_llm, get_llm
+from app.config import editor_llm, get_llm
 from app.nodes.writer.edit_report import make_edit_report
 from app.nodes.writer.write_report import make_write_report
 from app.state.run_state import update_run_state
@@ -20,6 +20,8 @@ class WriterState(TypedDict):
     writing_feedback: dict[str, str]
     should_writer_continue: bool
     writing_complete: dict[str, bool]
+    final_report: str
+    status: str
 
 def route_writer(state):
     """
@@ -93,5 +95,6 @@ def initialize_writer_state(state):
     return {
         "writing_iteration": 0,
         "should_continue": False,
-        "writing_complete": writing_state_init
+        "writing_complete": writing_state_init,
+        "status": "Initialized Writer Subgraph."
     }

@@ -29,7 +29,6 @@ def make_write_report(llm):
         section_drafts = writing_draft.get("section_drafts", {})
 
         section_drafts = writing_draft.get("section_drafts", {})
-        section_feedback = writing_feedback.get("section_feedback", {})
 
         for section_title, subsections in outline_object.items():
             if(writing_complete.get(section_title) != True):
@@ -44,6 +43,7 @@ def make_write_report(llm):
             "writing_draft": {
                 "section_drafts": section_drafts,
             },
+            "status": "Completed writing iteration.",
         }
     return write_report
 

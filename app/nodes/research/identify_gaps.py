@@ -34,10 +34,11 @@ def make_identify_gaps():
         if number_of_research_runs >= NUM_RESEARCH_ITERATIONS:
             should_research_continue = True
         update_run_state(state.get("request_id", ), research_iteration=number_of_research_runs, should_research_continue=should_research_continue, 
-                         research_complete=research_complete, last_completed_node="identify_gaps", status="Identifying gaps in research sources.")
+                         research_complete=research_complete, last_completed_node="identify_gaps", status="Identified gaps in research sources.")
         return {
             "research_iteration": number_of_research_runs,
             "should_research_continue": should_research_continue,
-            "research_complete": research_complete
+            "research_complete": research_complete,
+            "status": "Identified gaps in research sources."
         }
     return identify_gaps

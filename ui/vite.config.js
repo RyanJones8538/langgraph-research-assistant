@@ -8,6 +8,7 @@ export default defineConfig({
       "/api": {
         target: "http://localhost:2024",
         changeOrigin: true,
+		rewrite: (path) => path.replace(/^\/api/, ""),
       },
     },
   },

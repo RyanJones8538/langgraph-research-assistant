@@ -14,9 +14,29 @@ const initialViewState = {
   streamingOutput: "",
   researchIteration: 0,
   writingIteration: 0,
+  statusHistory: [],
   loading: false,
   error: "",
 };
+
+function hasGraphInterrupt(payload) {
+  const statusText = String(payload?.status ?? "").toLowerCase();
+  const awaitingReviewFromStatus =
+    statusText.includes("awaiting review") || statusText.includes("reviewing user comment");
+  const hasOutlineWithoutFinalReport = Boolean(payload?.current_outline && !payload?.final_report);
+
+  return Boolean(
+    payload?.interrupted ||
+      payload?.interrupt ||
+      payload?.__interrupt__ ||
+      awaitingReviewFromStatus ||
+      hasOutlineWithoutFinalReport
+  );
+}
+
+function hasCompletedRun(payload) {
+  return Boolean(payload?.completed || payload?.final_report);
+}
 
 export default function App() {
   const [viewState, setViewState] = useState(initialViewState);
@@ -30,13 +50,19 @@ export default function App() {
       status: viewState.status,
       research_iteration: viewState.researchIteration,
       writing_iteration: viewState.writingIteration,
+      status_history: viewState.statusHistory,
     }),
     [viewState]
   );
 
   const handleStartRun = async (topic) => {
+    const nextThreadId = `thread-${crypto.randomUUID()}`;
     setViewState((previous) => ({
       ...previous,
+      threadId: nextThreadId,
+      requestId: "",
+      output: "",
+      statusHistory: [],
       loading: true,
       error: "",
       runPhase: "running",
@@ -45,16 +71,21 @@ export default function App() {
     }));
 
     try {
-      const payload = await startRun(topic, viewState.threadId);
+      const payload = await startRun(topic, nextThreadId);
 
       setViewState((previous) => ({
         ...previous,
         loading: false,
         requestId: payload.request_id ?? previous.requestId,
         status: payload.status ?? "Run started.",
+        statusHistory: payload.status_history ?? previous.statusHistory,
         output: payload.current_outline ?? payload.final_report ?? previous.output,
         streamingOutput: JSON.stringify(payload, null, 2),
-        runPhase: payload.interrupted ? "awaiting_review" : "running",
+        runPhase: hasGraphInterrupt(payload)
+          ? "awaiting_review"
+          : hasCompletedRun(payload)
+            ? "complete"
+            : "running",
       }));
     } catch (error) {
       setViewState((previous) => ({
@@ -84,12 +115,17 @@ export default function App() {
         ...previous,
         loading: false,
         status: payload.status ?? "Run resumed.",
+        statusHistory: payload.status_history ?? previous.statusHistory,
         output: payload.final_report ?? payload.current_outline ?? previous.output,
         streamingOutput: JSON.stringify(payload, null, 2),
         researchIteration:
           payload.research_iteration ?? previous.researchIteration,
         writingIteration: payload.writing_iteration ?? previous.writingIteration,
-        runPhase: payload.completed ? "complete" : payload.interrupted ? "awaiting_review" : "running",
+        runPhase: hasCompletedRun(payload)
+          ? "complete"
+          : hasGraphInterrupt(payload)
+            ? "awaiting_review"
+            : "running",
       }));
     } catch (error) {
       setViewState((previous) => ({

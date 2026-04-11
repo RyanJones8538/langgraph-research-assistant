@@ -12,6 +12,24 @@ def make_edit_report(llm):
     Returns:
         edit_report function, which can be used as a node in the writer graph.
     """
+    def write_final_report(outline_object: dict[str, list[str]], section_drafts: dict[str, str]) -> str:
+        """
+        Writes the final report based on the section drafts and the outline object.
+        Args:
+            outline_object: The outline object containing sections and subsections.
+            section_drafts: The draft content for each section and subsection.
+        Returns:
+            The final report as a string.
+        """        
+        report_lines = []
+        for section_title, subsections in outline_object.items():
+            section_text = section_drafts.get(section_title, "")
+            report_lines.append(f"{section_title}\n{section_text}\n")
+            for subsection in subsections:
+                subsection_text = section_drafts.get(subsection, "")
+                report_lines.append(f"{subsection}\n{subsection_text}\n")
+        return "\n".join(report_lines)
+    
     def edit_report(state):
         """
         Edits the draft report based on section-specific questions and provides feedback on edits needed and whether the section passes or fails.
@@ -31,8 +49,6 @@ def make_edit_report(llm):
         section_drafts = writing_draft.get("section_drafts", {})
         section_feedback = writing_feedback.get("section_feedback", {})
         number_of_iterations = number_of_iterations + 1
-        if number_of_iterations >= NUM_WRITING_ITERATIONS:
-            should_writer_continue = True
         
         for section_title, subsections in outline_object.items():
             if writing_complete.get(section_title) != True:
@@ -43,8 +59,22 @@ def make_edit_report(llm):
                     section_feedback[subsection] = run_llm_editor(subsection, section_questions.get(subsection, []), section_drafts.get(subsection, "N/A"), llm)
                     writing_complete[subsection] = bool(section_feedback[subsection].get("pass_or_fail", False))
         status = "Writing in progress."
+        final_report = ""
+
+        if number_of_iterations >= NUM_WRITING_ITERATIONS:
+            should_writer_continue = True
+        else:
+            false_found = False
+            for section in writing_complete:
+                if writing_complete[section] == False:
+                    false_found = True
+                    break
+            if false_found == False:
+                 should_writer_continue = True
+
         if should_writer_continue:
             status = "Completed writing iterations."
+            final_report = write_final_report(outline_object, section_drafts)
         update_run_state(state.get("request_id", ), status=status,writing_iteration=number_of_iterations, should_writer_continue=should_writer_continue, 
                          writing_complete=writing_complete, writing_feedback={"section_feedback": section_feedback}, last_completed_node="editor")
         return {
@@ -54,6 +84,8 @@ def make_edit_report(llm):
             "writing_feedback": {
                 "section_feedback": section_feedback,
             },
+            "final_report": final_report,
+            "status": status
         }
     return edit_report
 

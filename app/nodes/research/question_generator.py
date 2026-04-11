@@ -33,6 +33,7 @@ def make_generate_questions(llm):
         update_run_state(state.get("request_id", ), section_questions=new_questions, last_completed_node="generate_questions", status="Generated research questions.")
         return {
             "section_questions": new_questions,
+            "status": "Generated research questions."
         }
     return generate_questions
 

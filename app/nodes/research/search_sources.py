@@ -113,6 +113,9 @@ def make_search_sources():
                         "all_sources": all_sources,
                     }
         update_run_state(state.get("request_id", ), candidate_sources=new_sources, last_completed_node="search_sources", status="Searched for sources.")
-        return {"candidate_sources": new_sources}
+        return {
+            "candidate_sources": new_sources,
+            "status": "Searched for sources."
+        }
 
     return search_sources

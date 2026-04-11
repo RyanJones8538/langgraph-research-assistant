@@ -68,8 +68,9 @@ def make_parse_review(llm):
                 """
         review_action =str(model.invoke(prompt).content).strip().lower().strip("\"'")
 
-        update_run_state(request_id, review_action=review_action, last_completed_node="parse_review", status="Evaluating user comment.")
+        update_run_state(request_id, review_action=review_action, last_completed_node="parse_review", status="Evaluated user comment.")
         return {
-            "review_action": review_action
+            "review_action": review_action,
+            "status": "Evaluated user comment.",
         }
     return parse_review

@@ -1,6 +1,5 @@
 import json
 
-from langgraph.types import interrupt
 from app.config import DEBUG_MODE, MAX_SECTIONS, MAX_SUBSECTIONS_PER_SECTION
 
 from app.state.run_state import update_run_state
@@ -118,17 +117,11 @@ def make_generate_outline(llm):
 
         update_run_state(request_id, current_outline=outline_text, outline_object=new_outline, outline_history=outline_history,
                           status="Generating outline.", last_completed_node="generate_outline")
-        
-        review_comment = interrupt("Do you approve of this outline?")
-        
-        update_run_state(request_id, current_outline=outline_text, outline_object=new_outline, outline_history=outline_history, review_comment=review_comment,
-                          status="Parsing user review of outline.", last_completed_node="generate_outline")
 
         return {
             "current_outline": outline_text,
             "outline_object": new_outline,
             "outline_history": outline_history,
-            "review_comment": review_comment,
-            "status": "Reviewing user comment.",
+            "status": "Generating outline.",
         }
     return generate_outline

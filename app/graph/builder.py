@@ -5,11 +5,11 @@ from uuid_utils import uuid4
 
 from app.graph.research import build_research_graph
 from app.graph.writer import build_writer_graph
+from app.nodes.outline.interrupt import make_request_outline_review
 from app.nodes.outline.outline import make_generate_outline
 from app.nodes.outline.parse_review import make_parse_review
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
-from langgraph.checkpoint.postgres import PostgresSaver
 from app.config import DATABASE_URL, get_llm
 from typing_extensions import TypedDict
 
@@ -25,7 +25,7 @@ class OutlineState(TypedDict):
     review_action: str | None
     review_comment: str | None
     validated_sources: dict[str, dict]
-    writing_draft: dict
+    final_report: str
     status: str
 
 def initialize_run(state: OutlineState, config: RunnableConfig | None = None):
@@ -128,7 +128,7 @@ def route_review(state):
     else:
         return "invalid_review"
 
-def build_graph():
+def build_graph(checkpointer):
     """
     Builds main graph for Research Assistant.
     Returns:
@@ -139,6 +139,7 @@ def build_graph():
     # Generate Graph Nodes
     builder.add_node("initialize", initialize_run)
     builder.add_node("generate_outline", make_generate_outline(get_llm))
+    builder.add_node("request_outline_review", make_request_outline_review)
     builder.add_node("parse_review", make_parse_review(get_llm))
     builder.add_node("handle_invalid_review", handle_invalid_review)
     builder.add_node("research_graph", build_research_graph())
@@ -147,7 +148,8 @@ def build_graph():
     # Generate Graph Edges
     builder.add_edge(START, "initialize")
     builder.add_edge("initialize", "generate_outline")
-    builder.add_edge("generate_outline", "parse_review")
+    builder.add_edge("generate_outline", "request_outline_review")
+    builder.add_edge("request_outline_review", "parse_review")
     builder.add_conditional_edges(
         "parse_review",
         route_review,
@@ -161,11 +163,6 @@ def build_graph():
     builder.add_edge("research_graph", "writer_graph")
     builder.add_edge("writer_graph", END)
 
-    with PostgresSaver.from_conn_string(DATABASE_URL) as checkpointer:
-        checkpointer.setup()  # creates checkpoint tables if needed
-        graph = builder.compile(checkpointer=checkpointer)
+    graph = builder.compile(checkpointer=checkpointer)
 
     return graph
-
-
-graph = build_graph()

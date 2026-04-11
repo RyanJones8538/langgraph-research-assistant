@@ -20,6 +20,7 @@ class ResearchState(TypedDict):
     research_iteration: int
     should_research_continue: bool
     research_complete: dict[str, bool]
+    status: str
 
 
 def route_research(state):
@@ -103,5 +104,6 @@ def initialize_research_state(state):
         "research_iteration": 0,
         "should_continue": False,
         "research_complete": research_state_init,
-        "validated_sources": validated_sources
+        "validated_sources": validated_sources,
+        "status": "Initialized Research Subgraph."
     }
