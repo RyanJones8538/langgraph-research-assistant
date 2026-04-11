@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { startRun, resumeRun } from "./api";
+import { streamStartRun, streamResumeRun } from "./api";
 import OutputDisplay from "./components/OutputDisplay";
 import StreamingDisplay from "./components/StreamingDisplay";
 import UserInput from "./components/UserInput";
@@ -67,26 +67,34 @@ export default function App() {
       error: "",
       runPhase: "running",
       status: "Starting run...",
-      streamingOutput: "Calling /start_run...",
+      streamingOutput: "Streaming /stream_run...",
     }));
 
     try {
-      const payload = await startRun(topic, nextThreadId);
-
-      setViewState((previous) => ({
-        ...previous,
-        loading: false,
-        requestId: payload.request_id ?? previous.requestId,
-        status: payload.status ?? "Run started.",
-        statusHistory: payload.status_history ?? previous.statusHistory,
-        output: payload.current_outline ?? payload.final_report ?? previous.output,
-        streamingOutput: JSON.stringify(payload, null, 2),
-        runPhase: hasGraphInterrupt(payload)
-          ? "awaiting_review"
-          : hasCompletedRun(payload)
-            ? "complete"
-            : "running",
-      }));
+      for await (const event of streamStartRun(topic, nextThreadId)) {
+        if (event.type === "status_update") {
+          setViewState((previous) => ({
+            ...previous,
+            status: event.status,
+            statusHistory: [...previous.statusHistory, event.status],
+          }));
+        } else if (event.type === "result") {
+          setViewState((previous) => ({
+            ...previous,
+            loading: false,
+            requestId: event.request_id ?? previous.requestId,
+            status: event.status ?? "Run started.",
+            statusHistory: event.status_history ?? previous.statusHistory,
+            output: event.current_outline ?? event.final_report ?? previous.output,
+            streamingOutput: JSON.stringify(event, null, 2),
+            runPhase: hasGraphInterrupt(event)
+              ? "awaiting_review"
+              : hasCompletedRun(event)
+                ? "complete"
+                : "running",
+          }));
+        }
+      }
     } catch (error) {
       setViewState((previous) => ({
         ...previous,
@@ -105,28 +113,35 @@ export default function App() {
       error: "",
       runPhase: "running",
       status: "Resuming interrupted run...",
-      streamingOutput: "Calling /resume_run...",
+      streamingOutput: "Streaming /stream_resume...",
     }));
 
     try {
-      const payload = await resumeRun(viewState.threadId, feedback);
-
-      setViewState((previous) => ({
-        ...previous,
-        loading: false,
-        status: payload.status ?? "Run resumed.",
-        statusHistory: payload.status_history ?? previous.statusHistory,
-        output: payload.final_report ?? payload.current_outline ?? previous.output,
-        streamingOutput: JSON.stringify(payload, null, 2),
-        researchIteration:
-          payload.research_iteration ?? previous.researchIteration,
-        writingIteration: payload.writing_iteration ?? previous.writingIteration,
-        runPhase: hasCompletedRun(payload)
-          ? "complete"
-          : hasGraphInterrupt(payload)
-            ? "awaiting_review"
-            : "running",
-      }));
+      for await (const event of streamResumeRun(viewState.threadId, feedback)) {
+        if (event.type === "status_update") {
+          setViewState((previous) => ({
+            ...previous,
+            status: event.status,
+            statusHistory: [...previous.statusHistory, event.status],
+          }));
+        } else if (event.type === "result") {
+          setViewState((previous) => ({
+            ...previous,
+            loading: false,
+            status: event.status ?? "Run resumed.",
+            statusHistory: event.status_history ?? previous.statusHistory,
+            output: event.final_report ?? event.current_outline ?? previous.output,
+            streamingOutput: JSON.stringify(event, null, 2),
+            researchIteration: event.research_iteration ?? previous.researchIteration,
+            writingIteration: event.writing_iteration ?? previous.writingIteration,
+            runPhase: hasCompletedRun(event)
+              ? "complete"
+              : hasGraphInterrupt(event)
+                ? "awaiting_review"
+                : "running",
+          }));
+        }
+      }
     } catch (error) {
       setViewState((previous) => ({
         ...previous,
