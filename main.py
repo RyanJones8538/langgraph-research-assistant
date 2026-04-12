@@ -45,24 +45,35 @@ def stream_graph_events(graph, graph_input, config):
     status_history: list[str] = []
     last_root_state: dict = {}
 
-    for namespace, state in graph.stream(
-        graph_input, config, stream_mode="values", subgraphs=True
+    # With stream_mode as a list and subgraphs=True, each item is a flat 3-tuple:
+    # (namespace, mode, data) where mode is "values" or "messages".
+    for namespace, mode, data in graph.stream(
+        graph_input, config, stream_mode=["values", "messages"], subgraphs=True
     ):
-        # namespace == () means root graph; subgraphs have a non-empty tuple.
-        if namespace == ():
-            last_root_state = state
+        if mode == "values":
+            if namespace == ():
+                last_root_state = data
+            status = data.get("status")
+            if isinstance(status, str) and status:
+                if not status_history or status_history[-1] != status:
+                    status_history.append(status)
+                    yield f"data: {json.dumps({'type': 'status_update', 'status': status})}\n\n"
 
-        status = state.get("status")
-        if isinstance(status, str) and status:
-            if not status_history or status_history[-1] != status:
-                status_history.append(status)
-                yield f"data: {json.dumps({'type': 'status_update', 'status': status})}\n\n"
+        elif mode == "messages":
+            # data is (AIMessageChunk, metadata_dict). metadata contains the
+            # originating node name under the key "langgraph_node".
+            # The node name is forwarded to the frontend so the token stream
+            # can group and label output per node, including structured-output
+            # nodes whose tool-call JSON is rendered as formatted fields.
+            chunk, metadata = data
+            node = metadata.get("langgraph_node", "")
+            content = chunk.content
+            if isinstance(content, str) and content:
+                yield f"data: {json.dumps({'type': 'token', 'node': node, 'content': content})}\n\n"
 
     last_root_state["status_history"] = status_history
-    # LangGraph adds runtime-internal keys like __interrupt__ and __pregel_tasks
-    # to the state dict. These contain non-JSON-serializable objects (Interrupt,
-    # PregelTask, etc.). Strip them before serializing — the frontend detects
-    # interrupts via hasOutlineWithoutFinalReport and the status text instead.
+    # Strip LangGraph runtime-internal keys (e.g. __interrupt__) that are not
+    # JSON-serializable before sending the final result event.
     serializable_state = {k: v for k, v in last_root_state.items() if not k.startswith("__")}
     yield f"data: {json.dumps({'type': 'result', **serializable_state})}\n\n"
 

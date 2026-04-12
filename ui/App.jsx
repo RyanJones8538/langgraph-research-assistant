@@ -11,6 +11,7 @@ const initialViewState = {
   requestId: "",
   status: "Waiting for input.",
   output: "",
+  tokenChunks: [],  // [{node, content}] — one entry per node, grouped in order
   streamingOutput: "",
   researchIteration: 0,
   writingIteration: 0,
@@ -38,6 +39,14 @@ function hasCompletedRun(payload) {
   return Boolean(payload?.completed || payload?.final_report);
 }
 
+function appendTokenChunk(chunks, node, content) {
+  const last = chunks.at(-1);
+  if (last && last.node === node) {
+    return [...chunks.slice(0, -1), { node, content: last.content + content }];
+  }
+  return [...chunks, { node, content }];
+}
+
 export default function App() {
   const [viewState, setViewState] = useState(initialViewState);
   const [streamMode, setStreamMode] = useState("basic");
@@ -62,6 +71,7 @@ export default function App() {
       threadId: nextThreadId,
       requestId: "",
       output: "",
+      tokenChunks: [],
       statusHistory: [],
       loading: true,
       error: "",
@@ -78,6 +88,11 @@ export default function App() {
             status: event.status,
             statusHistory: [...previous.statusHistory, event.status],
           }));
+        } else if (event.type === "token") {
+          setViewState((previous) => ({
+            ...previous,
+            tokenChunks: appendTokenChunk(previous.tokenChunks, event.node, event.content),
+          }));
         } else if (event.type === "result") {
           setViewState((previous) => ({
             ...previous,
@@ -85,7 +100,7 @@ export default function App() {
             requestId: event.request_id ?? previous.requestId,
             status: event.status ?? "Run started.",
             statusHistory: event.status_history ?? previous.statusHistory,
-            output: event.current_outline ?? event.final_report ?? previous.output,
+            output: event.current_outline || event.final_report || previous.output,
             streamingOutput: JSON.stringify(event, null, 2),
             runPhase: hasGraphInterrupt(event)
               ? "awaiting_review"
@@ -110,6 +125,7 @@ export default function App() {
     setViewState((previous) => ({
       ...previous,
       loading: true,
+      tokenChunks: [],
       error: "",
       runPhase: "running",
       status: "Resuming interrupted run...",
@@ -124,13 +140,18 @@ export default function App() {
             status: event.status,
             statusHistory: [...previous.statusHistory, event.status],
           }));
+        } else if (event.type === "token") {
+          setViewState((previous) => ({
+            ...previous,
+            tokenChunks: appendTokenChunk(previous.tokenChunks, event.node, event.content),
+          }));
         } else if (event.type === "result") {
           setViewState((previous) => ({
             ...previous,
             loading: false,
             status: event.status ?? "Run resumed.",
             statusHistory: event.status_history ?? previous.statusHistory,
-            output: event.final_report ?? event.current_outline ?? previous.output,
+            output: event.final_report || event.current_outline || previous.output,
             streamingOutput: JSON.stringify(event, null, 2),
             researchIteration: event.research_iteration ?? previous.researchIteration,
             writingIteration: event.writing_iteration ?? previous.writingIteration,
@@ -171,6 +192,7 @@ export default function App() {
         >
           <option value="basic">Basic (status)</option>
           <option value="verbose">Verbose (raw stream)</option>
+          <option value="tokens">Token stream (LLM output)</option>
         </select>
       </div>
 
@@ -188,11 +210,16 @@ export default function App() {
           alignItems: "start",
         }}
       >
-        <OutputDisplay output={viewState.output} />
+        <OutputDisplay
+          output={viewState.output}
+          statusHistory={viewState.statusHistory}
+          runPhase={viewState.runPhase}
+        />
         <StreamingDisplay
           mode={streamMode}
           status={viewState.status}
           streamText={viewState.streamingOutput}
+          tokenChunks={viewState.tokenChunks}
         />
         <UserInput
           runPhase={viewState.runPhase}

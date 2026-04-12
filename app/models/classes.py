@@ -28,6 +28,7 @@ class EvaluatedSource(BaseModel):
 
 
 class SectionEvidenceResult(BaseModel):
+    section_title: str = Field(description="Title of the section being evaluated")
     kept_sources: list[EvaluatedSource] = Field(description="Sources worth keeping for this section")
     dropped_sources: list[EvaluatedSource] = Field(description="Sources considered but rejected")
     coverage_gaps: list[str] = Field(description="Important unanswered questions or weakly supported areas in this section")
