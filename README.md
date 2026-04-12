@@ -2,7 +2,7 @@
 graph TD
     START([START]) --> init[initialize]
     init --> outline[generate_outline]
-    outline --> review[request_outline_review\nINTERRUPT\ncollects & appends review message]
+    outline --> review[request_outline_review]
     review --> parse[parse_review]
 
     parse -->|approve| condense[condense_topic]
