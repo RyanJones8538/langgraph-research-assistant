@@ -122,7 +122,7 @@ def start_run_stream(payload: StartRunRequest, request: Request):
         "outline_history": [],
         "review_action": None,
         "review_comment": None,
-        "final_report": "",
+        "final_report": None,
         "validated_sources": {},
         "status": "Initializing Research Assistant",
     }
@@ -189,7 +189,7 @@ def start_run(payload: StartRunRequest, request: Request):
         "outline_history": [],
         "review_action": None,
         "review_comment": None,
-        "final_report": "",
+        "final_report": None,
         "validated_sources": {},
         "status": "Initializing Research Assistant",
     }

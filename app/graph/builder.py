@@ -26,7 +26,7 @@ class OutlineState(TypedDict):
     review_action: str | None
     review_comment: str | None
     validated_sources: dict[str, dict]
-    final_report: str
+    final_report: dict | None
     status: str
 
 def initialize_run(state: OutlineState, config: RunnableConfig | None = None):

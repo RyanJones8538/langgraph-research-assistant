@@ -35,8 +35,6 @@ def make_search_sources():
 
                 for question in questions:
                     response = search.invoke({"query": question})
-                    print("RAW RESPONSE:", response)
-                    print("TYPE:", type(response))
                     result_items = response.get("results", [])
                     cleaned_items = [
                         {
@@ -80,8 +78,6 @@ def make_search_sources():
                 coverage_gaps = section_validation.get("coverage_gaps", [])
                 for gap in coverage_gaps:
                     response = search.invoke({"query": gap})
-                    print("RAW RESPONSE:", response)
-                    print("TYPE:", type(response))
                     result_items = response.get("results", [])
                     cleaned_items = [
                         {

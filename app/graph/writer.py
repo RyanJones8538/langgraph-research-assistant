@@ -20,7 +20,7 @@ class WriterState(TypedDict):
     writing_feedback: dict[str, str]
     should_writer_continue: bool
     writing_complete: dict[str, bool]
-    final_report: str
+    final_report: dict | None
     status: str
 
 def route_writer(state):

@@ -12,23 +12,27 @@ def make_edit_report(llm):
     Returns:
         edit_report function, which can be used as a node in the writer graph.
     """
-    def write_final_report(outline_object: dict[str, list[str]], section_drafts: dict[str, str]) -> str:
+    def write_final_report(outline_object: dict[str, list[str]], section_drafts: dict[str, str]) -> dict:
         """
         Writes the final report based on the section drafts and the outline object.
         Args:
             outline_object: The outline object containing sections and subsections.
             section_drafts: The draft content for each section and subsection.
         Returns:
-            The final report as a string.
-        """        
-        report_lines = []
+            The final report as a dict with a 'sections' list, each entry containing
+            a title, text, and list of subsection dicts with their own title and text.
+        """
+        sections = []
         for section_title, subsections in outline_object.items():
-            section_text = section_drafts.get(section_title, "")
-            report_lines.append(f"{section_title}\n{section_text}\n")
-            for subsection in subsections:
-                subsection_text = section_drafts.get(subsection, "")
-                report_lines.append(f"{subsection}\n{subsection_text}\n")
-        return "\n".join(report_lines)
+            sections.append({
+                "title": section_title,
+                "text": section_drafts.get(section_title, ""),
+                "subsections": [
+                    {"title": sub, "text": section_drafts.get(sub, "")}
+                    for sub in subsections
+                ],
+            })
+        return {"sections": sections}
     
     def edit_report(state):
         """
@@ -59,7 +63,7 @@ def make_edit_report(llm):
                     section_feedback[subsection] = run_llm_editor(subsection, section_questions.get(subsection, []), section_drafts.get(subsection, "N/A"), llm)
                     writing_complete[subsection] = bool(section_feedback[subsection].get("pass_or_fail", False))
         status = "Writing in progress."
-        final_report = ""
+        final_report = None
 
         if number_of_iterations >= NUM_WRITING_ITERATIONS:
             should_writer_continue = True

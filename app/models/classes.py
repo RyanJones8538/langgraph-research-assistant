@@ -36,9 +36,3 @@ class SectionEvidenceResult(BaseModel):
 class WritingSectionFeedback(BaseModel):
     feedback: list[str] = Field(description="Feedback on the writing for this section, including what to improve or add")
     pass_or_fail: bool = Field(description="Whether the section writing passed review or needs revision")
-
-class WritingFeedback(BaseModel):
-    section_feedback: dict[str, WritingSectionFeedback] = Field(description="Mapping of section titles to their writing feedback")
-
-class WritingDrafts(BaseModel):
-    section_drafts: dict[str, str] = Field(description="Mapping of section titles to their current draft content")

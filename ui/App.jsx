@@ -77,7 +77,7 @@ export default function App() {
       error: "",
       runPhase: "running",
       status: "Starting run...",
-      streamingOutput: "Streaming /stream_run...",
+      streamingOutput: "Starting run...",
     }));
 
     try {
@@ -178,9 +178,7 @@ export default function App() {
     <div style={{ padding: "1.5rem", fontFamily: "sans-serif" }}>
       <h1>LangGraph Research Assistant</h1>
       <p>
-        Use <code>request_id</code> / <code>thread_id</code> for run identity and
-        use <code>runPhase</code> only for UI flow. This avoids accidental resume
-        calls when a boolean gets out of sync.
+        A proposed outline and eventual final report are displayed here.
       </p>
 
       <div style={{ marginBottom: "1rem" }}>

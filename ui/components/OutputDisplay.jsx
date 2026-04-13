@@ -49,9 +49,38 @@ function isOutlineTextFormat(text) {
   return /^1\.\s/.test(text.trimStart());
 }
 
-function ContentDisplay({ text }) {
+function FinalReportDisplay({ data }) {
+  return (
+    <div>
+      {data.sections.map((section, i) => (
+        <div key={i} style={{ marginBottom: "1.5rem" }}>
+          <h2 style={{ margin: "0 0 0.4rem" }}>{section.title}</h2>
+          {section.text && <p style={{ margin: "0 0 0.8rem" }}>{section.text}</p>}
+          {section.subsections.map((sub, j) => (
+            <div key={j} style={{ marginBottom: "0.8rem", marginLeft: "1.25rem" }}>
+              <h3 style={{ margin: "0 0 0.3rem" }}>{sub.title}</h3>
+              {sub.text && <p style={{ margin: 0, fontSize: "0.95rem" }}>{sub.text}</p>}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ContentDisplay({ content }) {
+  // Already a parsed object (final_report dict passed directly from state)
+  if (content && typeof content === "object") {
+    if (Array.isArray(content.sections)) return <FinalReportDisplay data={content} />;
+    return <OutlineJsonDisplay data={content} />;
+  }
+
+  const text = String(content);
   const parsed = tryParseJsonObject(text);
-  if (parsed) return <OutlineJsonDisplay data={parsed} />;
+  if (parsed) {
+    if (Array.isArray(parsed.sections)) return <FinalReportDisplay data={parsed} />;
+    return <OutlineJsonDisplay data={parsed} />;
+  }
 
   if (isOutlineTextFormat(text)) return <OutlineTextDisplay text={text} />;
 
@@ -91,7 +120,7 @@ export default function OutputDisplay({ output, statusHistory, runPhase }) {
       </h2>
       <p>Proposed outlines and the final report should appear here.</p>
       {output ? (
-        <ContentDisplay text={output} />
+        <ContentDisplay content={output} />
       ) : statusHistory?.length > 0 ? (
         <StatusLog statusHistory={statusHistory} isRunning={isRunning} />
       ) : (
