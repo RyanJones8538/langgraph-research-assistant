@@ -12,22 +12,9 @@ from app.nodes.outline.parse_review import make_parse_review
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from app.config import DATABASE_URL, get_llm
-from typing_extensions import TypedDict
+from app.state.graph_state import OutlineState
 
-class OutlineState(TypedDict):
-    request_id: str
-    thread_id: str
-    topic: str
-    request_messages: list[str]
-    section_questions: dict[str, list[str]]
-    current_outline: str
-    outline_object: dict[str, list[str]]
-    outline_history: list[str]
-    review_action: str | None
-    review_comment: str | None
-    validated_sources: dict[str, dict]
-    final_report: dict | None
-    status: str
+
 
 def initialize_run(state: OutlineState, config: RunnableConfig | None = None):
     """

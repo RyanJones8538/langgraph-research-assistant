@@ -5,6 +5,14 @@ class SectionQuestions(BaseModel):
     section_title: str = Field(description="Title of the section")
     questions: list[str] = Field(description="Focused research questions for this section")
 
+class SectionSourceInput(TypedDict):
+    request_id: str
+    questions: list[str]
+    section_title: str
+    validated_sources: dict
+    research_complete: bool
+    research_iteration: int
+
 class SourceItem(TypedDict):
     title: str
     url: str
@@ -15,6 +23,21 @@ class SectionResearchCandidates(TypedDict):
     questions: list[str]
     sources_by_question: dict[str, list[SourceItem]]
     all_sources: list[SourceItem]
+
+class SectionEvaluationInput(TypedDict):
+    request_id: str
+    topic: str
+    section_title: str
+    questions: list[str]
+    candidate_sources: SectionResearchCandidates
+    validated_sources: dict
+    research_iteration: int
+
+class SectionQuestionInput(TypedDict):
+    """Mini-state passed to each parallel question generator."""
+    request_id: str
+    topic: str
+    section_title: str
 
 class EvaluatedSource(BaseModel):
     title: str = Field(description="Title of the source")

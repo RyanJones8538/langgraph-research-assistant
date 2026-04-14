@@ -1,27 +1,12 @@
-from typing_extensions import TypedDict
-
 from langgraph.graph import END, START, StateGraph
 
 from app.config import editor_llm, get_llm
+from app.nodes.writer.check_writer_complete import generate_check_writer_complete
 from app.nodes.writer.edit_report import make_edit_report
 from app.nodes.writer.write_report import make_write_report
+from app.state.graph_state import WriterState
 from app.state.run_state import update_run_state
 
-
-class WriterState(TypedDict):
-    request_id: str
-    thread_id: str
-    topic: str
-    outline_object: dict[str, list[str]]
-    section_questions: dict[str, list[str]]
-    validated_sources: dict[str, dict]
-    writing_iteration: int
-    writing_draft: dict
-    writing_feedback: dict[str, str]
-    should_writer_continue: bool
-    writing_complete: dict[str, bool]
-    final_report: dict | None
-    status: str
 
 def route_writer(state):
     """
@@ -31,18 +16,9 @@ def route_writer(state):
     Returns:
         String corresponding to the next node to route to, either "continue" or "retry"
     """
-    should_continue = state["should_writer_continue"]
-    writing_complete = state["writing_complete"]
+    should_writer_continue = state["should_writer_continue"]
 
-    falsesFound = False
-    for section_title in writing_complete:
-        if writing_complete[section_title] == False:
-            falsesFound = True
-            break
-    if falsesFound == False:
-        should_continue = True
-
-    if should_continue == True:
+    if should_writer_continue == True:
         return "continue"
     return "retry"
 
@@ -59,12 +35,15 @@ def build_writer_graph():
     builder.add_node("initialize_writer", initialize_writer_state)
     builder.add_node("writer", make_write_report(get_llm))
     builder.add_node("editor", make_edit_report(editor_llm))
+    builder.add_node("check_writer_complete", generate_check_writer_complete())
 
     builder.add_edge(START, "initialize_writer")
     builder.add_edge("initialize_writer", "writer")
     builder.add_edge("writer", "editor")
+    builder.add_edge("editor", "check_writer_complete")
+
     builder.add_conditional_edges(
-        "editor", 
+        "check_writer_complete",
         route_writer, {
             "continue": END, 
             "retry": "writer"

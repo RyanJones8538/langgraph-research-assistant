@@ -1,6 +1,6 @@
 from urllib.parse import urlparse
 
-from app.models.classes import EvaluatedSource, SourceItem
+from app.models.classes import EvaluatedSource, SectionEvaluationInput, SourceItem
 from app.state.run_state import update_run_state
 
 
@@ -126,7 +126,7 @@ def deterministic_filter(sources: list[EvaluatedSource]) -> tuple[list[Evaluated
 
     return kept, dropped
 
-def make_evaluate_evidence(llm):
+def make_evaluate_evidence_by_section(llm):
     """
     Wrapper function for evaluate_sources node, which takes in the candidate sources for each section and uses the LLM to evaluate their relevance, 
     reliability, and whether they should be kept for writing.
@@ -135,7 +135,7 @@ def make_evaluate_evidence(llm):
     Returns:
         evaluate_evidence function, which can be used as a node in the graph.
     """
-    def evaluate_evidence(state):
+    def evaluate_evidence_by_section(state: SectionEvaluationInput):
         """
         Creates the evaluate_evidence node.
         Args:
@@ -146,86 +146,83 @@ def make_evaluate_evidence(llm):
         model = llm()
 
         topic = state["topic"]
+        section_title = state["section_title"]
+        section_questions = state["questions"]
         candidate_sources = state["candidate_sources"]
-        section_questions = state["section_questions"]
-        research_complete = state["research_complete"]
         complete_validation = state.get("validated_sources", {})
         research_iteration = state.get("research_iteration", 0)
 
         validated_sources: dict[str, dict] = {}
+        raw_candidates = candidate_sources["all_sources"]
 
-        for section_title in candidate_sources:
-            if research_complete[section_title]:
-                continue
-            questions = section_questions[section_title]
-            raw_candidates = candidate_sources[section_title]["all_sources"]
+        # 1. Deduplicate raw search results
+        deduped_candidates = dedupe_sources(raw_candidates)
 
-            # 1. Deduplicate raw search results
-            deduped_candidates = dedupe_sources(raw_candidates)
+        # 2. Deterministic filtering
+        prelim_kept, prelim_dropped = deterministic_filter(deduped_candidates)
 
-            # 2. Deterministic filtering
-            prelim_kept, prelim_dropped = deterministic_filter(deduped_candidates)
-
-            # If nothing survives deterministic filtering, record the gap and continue
-            if not prelim_kept:
-                validated_sources[section_title] = {
-                    "kept_sources": [],
-                    "dropped_sources": [item.model_dump() for item in prelim_dropped],
-                    "coverage_gaps": [
-                        f"No usable sources survived deterministic filtering for section '{section_title}'."
-                    ],
-                }
-                continue
-            if research_iteration > 0:
-                previous_result = complete_validation.get(section_title)
-                if previous_result:
-                    # Removes repeated sources across iterations to avoid redundant LLM usage.
-                    prelim_kept = remove_previously_kept_sources(
-                        prelim_kept, previous_result.get("kept_sources", [])
-                    )
-            # 3. LLM evaluation of remaining sources
-            prompt = f"""
-                You are evaluating research sources for a report.
-
-                Topic:
-                {topic}
-
-                Section title:
-                {section_title}
-
-                Section questions:
-                {questions}
-
-                Candidate sources:
-                {prelim_kept}
-
-                Evaluate the sources for:
-                - relevance to this section
-                - likely reliability for this topic
-                - whether the source should be kept for later writing
-
-                Important:
-                - For fictional/media topics, official franchise sources and reputable reference/entertainment sources may be appropriate.
-                - Do not penalize a source merely because it is not academic if the topic is fictional or pop-cultural.
-                - Keep only sources that are specifically relevant to this section and its questions.
-                - Return concise reasons.
-                - Identify any coverage gaps that remain even after reviewing these sources.
-                """
-
-            result = model.invoke(prompt)
-
-            # Merge deterministic drops into dropped_sources for traceability
-            dropped_dicts = [item.model_dump() for item in result.dropped_sources]
-            dropped_dicts.extend([item.model_dump() for item in prelim_dropped])
-
+        # If nothing survives deterministic filtering, record the gap and continue
+        if not prelim_kept:
             validated_sources[section_title] = {
-                "kept_sources": [item.model_dump() for item in result.kept_sources],
-                "dropped_sources": dropped_dicts,
-                "coverage_gaps": result.coverage_gaps,
+                "kept_sources": [],
+                "dropped_sources": [item.model_dump() for item in prelim_dropped],
+                "coverage_gaps": [
+                    f"No usable sources survived deterministic filtering for section '{section_title}'."
+                ],
             }
+            return {
+                "validated_sources": {section_title: validated_sources[section_title]}
+            }
+        if research_iteration > 0:
+            previous_result = complete_validation
+            if previous_result:
+                # Removes repeated sources across iterations to avoid redundant LLM usage.
+                prelim_kept = remove_previously_kept_sources(
+                    prelim_kept, previous_result.get("kept_sources", [])
+                )
+        # 3. LLM evaluation of remaining sources
+        prompt = f"""
+            You are evaluating research sources for a report.
+
+            Topic:
+            {topic}
+
+            Section title:
+            {section_title}
+
+            Section questions:
+            {section_questions}
+
+            Candidate sources:
+            {prelim_kept}
+
+            Evaluate the sources for:
+            - relevance to this section
+            - likely reliability for this topic
+            - whether the source should be kept for later writing
+
+            Important:
+            - For fictional/media topics, official franchise sources and reputable reference/entertainment sources may be appropriate.
+            - Do not penalize a source merely because it is not academic if the topic is fictional or pop-cultural.
+            - Keep only sources that are specifically relevant to this section and its questions.
+            - Return concise reasons.
+            - Identify any coverage gaps that remain even after reviewing these sources.
+            """
+
+        result = model.invoke(prompt)
+
+        # Merge deterministic drops into dropped_sources for traceability
+        dropped_dicts = [item.model_dump() for item in result.dropped_sources]
+        dropped_dicts.extend([item.model_dump() for item in prelim_dropped])
+
+        validated_sources[section_title] = {
+            "kept_sources": [item.model_dump() for item in result.kept_sources],
+            "dropped_sources": dropped_dicts,
+            "coverage_gaps": result.coverage_gaps,
+        }
         update_run_state(state.get("request_id", ), validated_sources=validated_sources, last_completed_node="evaluate_sources", status="Evaluated quality of sources.")
         return {
             "validated_sources": validated_sources,
             "status": "Evaluated quality of sources."
         }
-    return evaluate_evidence
+    return evaluate_evidence_by_section

@@ -65,17 +65,6 @@ def make_edit_report(llm):
         status = "Writing in progress."
         final_report = None
 
-        if number_of_iterations >= NUM_WRITING_ITERATIONS:
-            should_writer_continue = True
-        else:
-            false_found = False
-            for section in writing_complete:
-                if writing_complete[section] == False:
-                    false_found = True
-                    break
-            if false_found == False:
-                 should_writer_continue = True
-
         if should_writer_continue:
             status = "Completed writing iterations."
             final_report = write_final_report(outline_object, section_drafts)
@@ -83,7 +72,6 @@ def make_edit_report(llm):
                          writing_complete=writing_complete, writing_feedback={"section_feedback": section_feedback}, last_completed_node="editor")
         return {
             "writing_iteration": number_of_iterations,
-            "should_writer_continue": should_writer_continue,
             "writing_complete": writing_complete,
             "writing_feedback": {
                 "section_feedback": section_feedback,

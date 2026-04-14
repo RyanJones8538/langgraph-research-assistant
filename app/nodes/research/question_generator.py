@@ -1,41 +1,33 @@
 from app.config import DEBUG_MODE, MAX_QUESTIONS_PER_SECTION
-from app.state.run_state import update_run_state
+from app.models.classes import SectionQuestionInput
 
-def make_generate_questions(llm):
+def make_generate_questions_for_section(llm):
     """
-    Wrapper function for generate_questions node, which generates questions based on the topic and approved outline sections.
+    Wrapper function for generate_questions_for_section node, which generates questions based on the topic and approved outline sections.
     Args:
         llm: The language model to use for generating the questions.
     Returns:
         generate_questions function, which can be used as a node in the graph.
     """
-    def generate_questions(state):
+    def generate_questions_for_section(state: SectionQuestionInput):
         """
-        Create generate_questions node, which takes in the approved outline sections and generates research questions for each section using the LLM.
+        Create generate_questions_for_section node, which takes in the approved outline sections and generates research questions for each section using the LLM.
         Args:
             state: The current state of the graph.
         Returns:
             Questions for each section of the outline, which will be used for searching for sources in the next node of the graph.
         """
         model = llm()
-        approved_outline = state["outline_object"]
         topic = state["topic"]
-        new_questions: dict[str, list[str]] = {}
+        section_title = state["section_title"]
 
-        for section_title, subsections in approved_outline.items():
-            section_questions = make_questions(model, topic, section_title)
-            new_questions[section_title] = section_questions.questions
+        result = make_questions(model, topic, section_title)
 
-            for subsection in subsections:
-                subsection_questions = make_questions(model, topic, subsection)
-                new_questions[subsection] = subsection_questions.questions
-
-        update_run_state(state.get("request_id", ), section_questions=new_questions, last_completed_node="generate_questions", status="Generated research questions.")
         return {
-            "section_questions": new_questions,
-            "status": "Generated research questions."
+            "section_questions": {section_title: result.questions},
+            "status": "Generated research questions.",
         }
-    return generate_questions
+    return generate_questions_for_section
 
 def make_questions(model, topic, section):
     """

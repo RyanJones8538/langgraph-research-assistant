@@ -6,6 +6,38 @@ function tryParseJsonObject(text) {
   return null;
 }
 
+function reportToMarkdown(content) {
+  const data =
+    content && typeof content === "object"
+      ? content
+      : tryParseJsonObject(String(content));
+
+  if (!data || !Array.isArray(data.sections)) return String(content);
+
+  return data.sections
+    .map((section) => {
+      const lines = [`# ${section.title}`];
+      if (section.text) lines.push("", section.text);
+      section.subsections?.forEach((sub) => {
+        lines.push("", `## ${sub.title}`);
+        if (sub.text) lines.push("", sub.text);
+      });
+      return lines.join("\n");
+    })
+    .join("\n\n");
+}
+
+function downloadMarkdown(content) {
+  const md = reportToMarkdown(content);
+  const blob = new Blob([md], { type: "text/markdown" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "report.md";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function OutlineJsonDisplay({ data }) {
   return (
     <div>
@@ -109,6 +141,7 @@ function StatusLog({ statusHistory, isRunning }) {
 
 export default function OutputDisplay({ output, statusHistory, runPhase }) {
   const isRunning = runPhase === "running";
+  const isComplete = runPhase === "complete";
 
   return (
     <section>
@@ -116,6 +149,14 @@ export default function OutputDisplay({ output, statusHistory, runPhase }) {
         Output{" "}
         {isRunning ? (
           <small style={{ fontWeight: "normal", color: "grey" }}>running…</small>
+        ) : null}
+        {isComplete && output ? (
+          <button
+            onClick={() => downloadMarkdown(output)}
+            style={{ marginLeft: "1rem", fontSize: "0.85rem" }}
+          >
+            Download .md
+          </button>
         ) : null}
       </h2>
       <p>Proposed outlines and the final report should appear here.</p>

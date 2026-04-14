@@ -25,9 +25,6 @@ def make_write_report(llm):
         section_questions = state["section_questions"]
         validated_sources = state["validated_sources"]
         topic = state["topic"]
-
-        section_drafts = writing_draft.get("section_drafts", {})
-
         section_drafts = writing_draft.get("section_drafts", {})
 
         for section_title, subsections in outline_object.items():
