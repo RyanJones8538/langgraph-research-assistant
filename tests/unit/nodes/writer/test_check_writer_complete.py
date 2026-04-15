@@ -11,7 +11,7 @@ from app.nodes.writer.check_writer_complete import make_check_writer_complete
 def test_check_writer_complete_all_sections_complete(mock_update):
     check_writer_complete = make_check_writer_complete()
     state = {
-        "writing_complete": {"Section 1": True, "Section 2": True, "Subsection 1.1": True, "Subsection 2.1": True},
+        "writing_complete_by_section": {"Section 1": True, "Section 2": True, "Subsection 1.1": True, "Subsection 2.1": True},
         "request_id": "req-1",
         "writing_iteration": 0,
         "outline_object": {"Section 1": ["Subsection 1.1"], "Section 2": ["Subsection 2.1"]},
@@ -19,14 +19,14 @@ def test_check_writer_complete_all_sections_complete(mock_update):
 
     result = check_writer_complete(state)
 
-    assert result["should_writer_continue"] == True
+    assert result["writing_done"] == True
     assert mock_update.call_count == 2
 
 @patch("app.nodes.writer.check_writer_complete.update_run_state")
 def test_check_writer_complete_some_sections_incomplete(mock_update):
     check_writer_complete = make_check_writer_complete()
     state = {
-        "writing_complete": {"Section 1": True, "Section 2": False, "Subsection 1.1": True, "Subsection 2.1": False},
+        "writing_complete_by_section": {"Section 1": True, "Section 2": False, "Subsection 1.1": True, "Subsection 2.1": False},
         "request_id": "req-2",
         "writing_iteration": 0,
         "outline_object": {"Section 1": ["Subsection 1.1"], "Section 2": ["Subsection 2.1"]},
@@ -34,14 +34,14 @@ def test_check_writer_complete_some_sections_incomplete(mock_update):
 
     result = check_writer_complete(state)
 
-    assert result["should_writer_continue"] == False
+    assert result["writing_done"] == False
     assert mock_update.call_count == 2
 
 @patch("app.nodes.writer.check_writer_complete.update_run_state")
 def test_check_writer_complete_max_iterations_reached(mock_update):
     check_writer_complete = make_check_writer_complete()
     state = {
-        "writing_complete": {"Section 1": False, "Section 2": False, "Subsection 1.1": False, "Subsection 2.1": False},
+        "writing_complete_by_section": {"Section 1": False, "Section 2": False, "Subsection 1.1": False, "Subsection 2.1": False},
         "request_id": "req-3",
         "writing_iteration": 5,
         "outline_object": {"Section 1": ["Subsection 1.1"], "Section 2": ["Subsection 2.1"]},
@@ -49,14 +49,14 @@ def test_check_writer_complete_max_iterations_reached(mock_update):
 
     result = check_writer_complete(state)
 
-    assert result["should_writer_continue"] == True
+    assert result["writing_done"] == True
     assert mock_update.call_count == 2
 
 @patch("app.nodes.writer.check_writer_complete.update_run_state")
 def test_check_writer_final_report_structure(mock_update):
     check_writer_complete = make_check_writer_complete()
     state = {
-        "writing_complete": {"Section 1": True, "Section 2": True, "Subsection 1.1": True, "Subsection 2.1": True},
+        "writing_complete_by_section": {"Section 1": True, "Section 2": True, "Subsection 1.1": True, "Subsection 2.1": True},
         "request_id": "req-4",
         "writing_iteration": 0,
         "outline_object": {"Section 1": ["Subsection 1.1"], "Section 2": ["Subsection 2.1"]},
@@ -84,7 +84,7 @@ def test_check_writer_final_report_structure(mock_update):
         ]
     }
 
-    assert result["should_writer_continue"] == True
+    assert result["writing_done"] == True
     assert mock_update.call_count == 2
     assert result["final_report"] == expected_final_report
 
@@ -92,7 +92,7 @@ def test_check_writer_final_report_structure(mock_update):
 def test_check_writer_complete_increments_iteration(mock_update):
     check_writer_complete = make_check_writer_complete()
     state = {
-        "writing_complete": {"Section 1": False, "Section 2": False, "Subsection 1.1": False, "Subsection 2.1": False},
+        "writing_complete_by_section": {"Section 1": False, "Section 2": False, "Subsection 1.1": False, "Subsection 2.1": False},
         "request_id": "req-5",
         "writing_iteration": 2,
         "outline_object": {"Section 1": ["Subsection 1.1"], "Section 2": ["Subsection 2.1"]},
@@ -100,7 +100,7 @@ def test_check_writer_complete_increments_iteration(mock_update):
 
     result = check_writer_complete(state)
 
-    assert result["should_writer_continue"] == True
+    assert result["writing_done"] == True
     assert mock_update.call_count == 2
     assert result["writing_iteration"] == 3
 
@@ -108,7 +108,7 @@ def test_check_writer_complete_increments_iteration(mock_update):
 def test_check_writer_complete_incomplete_subsection(mock_update):
     check_writer_complete = make_check_writer_complete()
     state = {
-        "writing_complete": {"Section 1": True, "Section 2": True, "Subsection 1.1": False, "Subsection 2.1": True},
+        "writing_complete_by_section": {"Section 1": True, "Section 2": True, "Subsection 1.1": False, "Subsection 2.1": True},
         "request_id": "req-6",
         "writing_iteration": 0,
         "outline_object": {"Section 1": ["Subsection 1.1"], "Section 2": ["Subsection 2.1"]},
@@ -116,5 +116,5 @@ def test_check_writer_complete_incomplete_subsection(mock_update):
 
     result = check_writer_complete(state)
 
-    assert result["should_writer_continue"] == False
+    assert result["writing_done"] == False
     assert mock_update.call_count == 2

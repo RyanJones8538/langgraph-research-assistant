@@ -28,48 +28,48 @@ def make_check_writer_complete():
             })
         return {"sections": sections}
     def check_writer_complete(state):
-        writing_complete = state.get("writing_complete", {})
+        writing_complete_by_section = state.get("writing_complete_by_section", {})
         outline_object = state.get("outline_object", {})
         writing_iteration = state.get("writing_iteration", 0)
         request_id = state.get("request_id", "")
 
-        update_run_state(request_id, status="Edited report draft.", writing_iteration=state.get("writing_iteration", 0), should_writer_continue=state.get("should_writer_continue", False),
-                         writing_complete=writing_complete, writing_feedback=state.get("writing_feedback", {}), last_completed_node="editor")
+        update_run_state(request_id, status="Edited report draft.", writing_iteration=state.get("writing_iteration", 0), writing_done=state.get("writing_done", False),
+                         writing_complete_by_section=writing_complete_by_section, writing_feedback=state.get("writing_feedback", {}), last_completed_node="editor")
 
-        logger.info("Checking if writing is complete for request ID: %s. Current writing iteration: %d. Writing complete status: %s", request_id, writing_iteration, writing_complete)
+        logger.info("Checking if writing is complete for request ID: %s. Current writing iteration: %d. Writing complete status: %s", request_id, writing_iteration, writing_complete_by_section)
 
-        should_writer_continue = False
+        writing_done = False
         falsesFound = False
         number_of_iterations = writing_iteration + 1
 
         if (number_of_iterations >= NUM_WRITING_ITERATIONS):
-            should_writer_continue = True
+            writing_done = True
         else:
             for section_title in outline_object.keys():
-                if writing_complete.get(section_title) != True:
+                if writing_complete_by_section.get(section_title) != True:
                     falsesFound = True
                     break
                 for subsection in outline_object[section_title]:
-                    if writing_complete.get(subsection) != True:
+                    if writing_complete_by_section.get(subsection) != True:
                         falsesFound = True
                         break
             if not falsesFound:
-                should_writer_continue = True
+                writing_done = True
 
-        logger.info("Determined should_writer_continue: %s for request ID: %s after checking writing completion. Number of iterations: %d", should_writer_continue, request_id, number_of_iterations)
+        logger.info("Determined writing_done: %s for request ID: %s after checking writing completion. Number of iterations: %d", writing_done, request_id, number_of_iterations)
         
         status = "Writing in progress."
         final_report = {}
-        if should_writer_continue:
+        if writing_done:
                 status = "Completed writing iterations."
                 final_report = write_final_report(outline_object, state.get("writing_draft", {}))
 
         logger.debug("Final report structure for request ID: %s: %s", request_id, final_report)
 
-        update_run_state(state.get("request_id", ""), status=status, should_writer_continue=should_writer_continue,
+        update_run_state(state.get("request_id", ""), status=status, writing_done=writing_done,
                          writing_iteration=number_of_iterations, last_completed_node="check_writer_complete", final_report=final_report)
 
-        return {"should_writer_continue": should_writer_continue,
+        return {"writing_done": writing_done,
                 "writing_iteration": number_of_iterations,
                 "final_report": final_report,
                 "status": status}

@@ -25,13 +25,13 @@ def dispatch_editor(state):
         state: The current state of the graph.
     """
     writing_draft = state.get("writing_draft", {})
-    writing_complete = state.get("writing_complete", {})
+    writing_complete_by_section = state.get("writing_complete_by_section", {})
     section_questions = state["section_questions"]
     request_id = state.get("request_id", "")
 
     targets = []
     for section_title, draft in writing_draft.items():
-        if(writing_complete.get(section_title) == False):
+        if(writing_complete_by_section.get(section_title) == False):
             targets.append(Send("editor", {
                 "request_id": request_id,
                 "section_title": section_title,
@@ -50,7 +50,7 @@ def dispatch_writer(state):
     outline_object = state["outline_object"]
     writing_draft = state.get("writing_draft", {})
     writing_feedback = state.get("writing_feedback", {})
-    writing_complete = state.get("writing_complete", {})
+    writing_complete_by_section = state.get("writing_complete_by_section", {})
     section_questions = state["section_questions"]
     validated_sources = state["validated_sources"]
     topic = state["topic"]
@@ -58,7 +58,7 @@ def dispatch_writer(state):
 
     targets = []
     for section_title, subsections in outline_object.items():
-        if(writing_complete.get(section_title) == False):
+        if(writing_complete_by_section.get(section_title) == False):
             targets.append(Send("writer", {
                 "request_id": request_id,
                 "topic": topic,
@@ -70,7 +70,7 @@ def dispatch_writer(state):
                 "writing_feedback": writing_feedback.get(section_title, {}),
             }))
         for subsection in subsections:
-            if(writing_complete.get(subsection) == False):
+            if(writing_complete_by_section.get(subsection) == False):
                 targets.append(Send("writer", {
                     "request_id": request_id,
                     "topic": topic,
@@ -93,12 +93,12 @@ def route_writer(state):
     Returns:
         String corresponding to the next node to route to, either "continue" or "retry"
     """
-    should_writer_continue = state["should_writer_continue"]
+    writing_done = state["writing_done"]
 
-    if should_writer_continue == True:
+    if writing_done == True:
         return END
     targets = []
-    for section_title, complete in state["writing_complete"].items():
+    for section_title, complete in state["writing_complete_by_section"].items():
         if complete == False:
             targets.append(Send("writer", {
                 "request_id": state.get("request_id", ""),
@@ -163,12 +163,12 @@ def initialize_writer_state(state):
         for subsection in subsections:
             writing_state_init[subsection] = False
 
-    update_run_state(request_id, writing_iteration=0, should_writer_continue=False, writing_complete=writing_state_init,
+    update_run_state(request_id, writing_iteration=0, writing_done=False, writing_complete_by_section=writing_state_init,
                      last_completed_node = "initialize_writer", status = "Initialized Writer Subgraph.")
     return {
         "writing_iteration": 0,
-        "should_writer_continue": False,
-        "writing_complete": writing_state_init,
+        "writing_done": False,
+        "writing_complete_by_section": writing_state_init,
         "status": "Initialized Writer Subgraph."
     }
 

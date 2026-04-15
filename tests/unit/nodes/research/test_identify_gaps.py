@@ -16,15 +16,15 @@ def test_identify_gaps_all_sections_complete(mock_update):
             "Section 2": {"kept_sources": [1, 2, 3]},
         },
         "research_iteration": 0,
-        "research_complete": {"Section 1": False, "Section 2": False},
+        "research_complete_by_section": {"Section 1": False, "Section 2": False},
         "request_id": "req-1"
     }
 
     result = identify_gaps(state)
 
-    assert result["should_research_continue"] == True
-    assert result["research_complete"]["Section 1"] == True
-    assert result["research_complete"]["Section 2"] == True
+    assert result["research_done"] == True
+    assert result["research_complete_by_section"]["Section 1"] == True
+    assert result["research_complete_by_section"]["Section 2"] == True
 
 @patch("app.nodes.research.identify_gaps.update_run_state")
 def test_identify_gaps_some_sections_incomplete(mock_update):
@@ -35,15 +35,15 @@ def test_identify_gaps_some_sections_incomplete(mock_update):
             "Section 2": {"kept_sources": [1]},
         },
         "research_iteration": 0,
-        "research_complete": {"Section 1": False, "Section 2": False},
+        "research_complete_by_section": {"Section 1": False, "Section 2": False},
         "request_id": "req-2"
     }
 
     result = identify_gaps(state)
 
-    assert result["should_research_continue"] == False
-    assert result["research_complete"]["Section 1"] == True
-    assert result["research_complete"]["Section 2"] == False
+    assert result["research_done"] == False
+    assert result["research_complete_by_section"]["Section 1"] == True
+    assert result["research_complete_by_section"]["Section 2"] == False
 
 @patch("app.nodes.research.identify_gaps.update_run_state")
 def test_identify_gaps_max_iterations_reached(mock_update):
@@ -54,15 +54,15 @@ def test_identify_gaps_max_iterations_reached(mock_update):
             "Section 2": {"kept_sources": [1]},
         },
         "research_iteration": 5,
-        "research_complete": {"Section 1": False, "Section 2": False},
+        "research_complete_by_section": {"Section 1": False, "Section 2": False},
         "request_id": "req-3"
     }
 
     result = identify_gaps(state)
 
-    assert result["should_research_continue"] == True
-    assert result["research_complete"]["Section 1"] == False
-    assert result["research_complete"]["Section 2"] == False
+    assert result["research_done"] == True
+    assert result["research_complete_by_section"]["Section 1"] == False
+    assert result["research_complete_by_section"]["Section 2"] == False
 
 @patch("app.nodes.research.identify_gaps.update_run_state")
 def test_identify_gaps_skips_already_complete_sections(mock_update):
@@ -75,7 +75,7 @@ def test_identify_gaps_skips_already_complete_sections(mock_update):
             "Section A": {"kept_sources": []},          # zero sources — would fail if checked
             "Section B": {"kept_sources": [{"url": "x"}] * 3},  # enough sources
         },
-        "research_complete": {
+        "research_complete_by_section": {
             "Section A": True,   # already done — must be skipped
             "Section B": False,
         },
@@ -83,6 +83,6 @@ def test_identify_gaps_skips_already_complete_sections(mock_update):
 
     result = identify_gaps(state)
 
-    assert result["should_research_continue"] == True
-    assert result["research_complete"]["Section A"] == True   # unchanged
-    assert result["research_complete"]["Section B"] == True   # newly marked complete
+    assert result["research_done"] == True
+    assert result["research_complete_by_section"]["Section A"] == True   # unchanged
+    assert result["research_complete_by_section"]["Section B"] == True   # newly marked complete

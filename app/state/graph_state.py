@@ -30,8 +30,8 @@ class ResearchState(TypedDict):
     candidate_sources: Annotated[dict[str, SectionResearchCandidates], operator.or_]
     validated_sources: Annotated[dict[str, dict], operator.or_]
     research_iteration: int
-    should_research_continue: bool
-    research_complete: dict[str, bool]
+    research_done: bool
+    research_complete_by_section: dict[str, bool]
     # Last value wins — parallel nodes may all write status simultaneously
     status: Annotated[str, lambda _, b: b]
 
@@ -46,7 +46,7 @@ class WriterState(TypedDict):
     # Flat maps of section_title -> value; operator.or_ merges across parallel nodes.
     writing_draft: Annotated[dict[str, str], operator.or_]
     writing_feedback: Annotated[dict[str, dict], operator.or_]
-    should_writer_continue: bool
-    writing_complete: Annotated[dict[str, bool], operator.or_]
+    writing_done: bool
+    writing_complete_by_section: Annotated[dict[str, bool], operator.or_]
     final_report: dict | None
     status: Annotated[str, lambda _, b: b]

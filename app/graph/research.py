@@ -1,10 +1,10 @@
 from app.nodes.research.evaluate_sources import make_evaluate_evidence_by_section
 from app.nodes.research.identify_gaps import make_identify_gaps
 from app.nodes.research.question_generator import make_generate_questions_for_section
-from app.nodes.research.search_sources import make_search_sources_by_section
+from app.nodes.research.search_sources import build_search_agent_graph
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
-from app.config import question_llm, validation_llm
+from app.config import get_llm, question_llm, validation_llm
 
 from app.state.graph_state import ResearchState
 from app.state.run_state import update_run_state
@@ -40,20 +40,20 @@ def sync_after_questions(state: ResearchState):
 
 def dispatch_search_sources(state: ResearchState):
     section_questions = state["section_questions"]
-    research_complete = state["research_complete"]
+    research_complete_by_section = state["research_complete_by_section"]
     research_iteration = state.get("research_iteration", 0)
     validated_sources = state.get("validated_sources", {})
 
     targets = []
     for section_title, questions in section_questions.items():
-        if research_complete[section_title] == False:
+        if research_complete_by_section[section_title] == False:
             targets.append(Send("search_sources_by_section", {
                 "request_id": state["request_id"],
                 "research_iteration": research_iteration,
                 "section_title": section_title,
                 "questions": questions,
                 "validated_sources": validated_sources.get(section_title, {}),
-                "research_complete": research_complete.get(section_title, False),
+                "research_complete": research_complete_by_section.get(section_title, False),
             }))
     return targets
 
@@ -95,17 +95,17 @@ def route_research(state):
     Returns:
         Either END if research is complete, or list of Send targets to route back to search sources for sections that are not complete.
     """
-    if state["should_research_continue"]:
+    if state["research_done"]:
         return END
     targets = []
-    for section_title, complete in state["research_complete"].items():
+    for section_title, complete in state["research_complete_by_section"].items():
         if not complete:
             targets.append(Send("search_sources_by_section", {
                 "request_id": state["request_id"],
                 "section_title": section_title,
                 "questions": state["section_questions"].get(section_title, []),
                 "validated_sources": state["validated_sources"].get(section_title, {}),
-                "research_complete": state["research_complete"].get(section_title, False),
+                "research_complete": state["research_complete_by_section"].get(section_title, False),
                 "research_iteration": state["research_iteration"],
             }))
     return targets
@@ -125,7 +125,7 @@ def build_research_graph():
     builder.add_node("initialize_research", initialize_research_state)
     builder.add_node("generate_questions_for_section", make_generate_questions_for_section(question_llm))
     builder.add_node("sync_after_questions", sync_after_questions)
-    builder.add_node("search_sources_by_section", make_search_sources_by_section())
+    builder.add_node("search_sources_by_section", build_search_agent_graph(get_llm))
     builder.add_node("sync_after_search", sync_after_search)
     builder.add_node("evaluate_sources_by_section", make_evaluate_evidence_by_section(validation_llm))
     builder.add_node("identify_gaps", make_identify_gaps())
@@ -180,12 +180,12 @@ def initialize_research_state(state):
                     "dropped_sources": [],
                     "coverage_gaps": [],
                 }
-    update_run_state(state.get("request_id", ), research_iteration=0, should_research_continue=False, research_complete = research_state_init, validated_sources=validated_sources,
+    update_run_state(state.get("request_id", ), research_iteration=0, research_done=False, research_complete_by_section=research_state_init, validated_sources=validated_sources,
                      status = "Initialized Research Subgraph.", last_completed_node = "initialize_research")
     return {
         "research_iteration": 0,
-        "should_research_continue": False,
-        "research_complete": research_state_init,
+        "research_done": False,
+        "research_complete_by_section": research_state_init,
         "validated_sources": validated_sources,
         "status": "Initialized Research Subgraph."
     }

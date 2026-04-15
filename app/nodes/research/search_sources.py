@@ -1,111 +1,130 @@
+import json
 import logging
-
-from app.config import MAX_RESULTS_PER_QUERY
-from langchain_tavily import TavilySearch
 from urllib.parse import urlparse
 
-from app.models.classes import SectionSourceInput
+
+from langgraph.graph import START, END, StateGraph
+from langgraph.prebuilt import ToolNode, tools_condition
+from langchain_tavily import TavilySearch
+from langchain_core.messages import SystemMessage, HumanMessage, add_messages
+from typing import Annotated, TypedDict
 
 logger = logging.getLogger(__name__)
 
-def make_search_sources_by_section():
-    """
-    Wrapper function to create search_sources node for research graph.
-    This node takes the research questions generated for each section of the outline and searches for sources using the TavilySearch tool. 
-    In the first iteration of research, it searches based on the questions. 
-    In subsequent iterations, it searches based on the identified gaps in research from the previous iteration.
-    Returns:
-        search_sources function, which can be used as a node in the research graph.
-    """
-    search = TavilySearch(max_results=MAX_RESULTS_PER_QUERY)
+# A local state just for this subgraph — the outer ResearchState doesn't need messages
+class SearchAgentState(TypedDict):
+    section_title: str
+    questions: list[str]
+    research_iteration: int
+    validated_sources: dict
+    messages: Annotated[list, add_messages]   # add_messages is the reducer for tool loops
+    candidate_sources: dict                   # output, same key as today
 
-    def search_sources_by_section(state: SectionSourceInput):
-        """
-        Creates search_sources node, which takes in the research questions for each section of the outline and searches for sources using the TavilySearch tool.
-        In the first iteration of research, it searches based on the questions.
-        In subsequent iterations, it searches based on the identified gaps in research from the previous iteration.
-        Args:
-            state: The current state of the graph.
-        Returns:
-            list of candidate sources for each section of the outline, which will be evaluated in the next node of the graph.
-        """
-        questions = state["questions"]
-        research_iteration = state.get("research_iteration")
-        section_title = state["section_title"]
 
-        logger.info("Searching for sources for section '%s'. Research iteration: %d. Questions count: %d", section_title, research_iteration, len(questions))
+def make_research_agent(llm, tools):
+    llm_with_tools = llm().bind_tools(tools)
+    def research_agent(state: SearchAgentState):
+        messages = state.get("messages", [])
+        logger.debug("Research agent received messages: %s", messages)
 
-        sources_by_category = {}
-        
-        all_sources = []
-
-        
-        new_sources = {}
-        if research_iteration == 0:
-            sources_by_question = {}
-            for question in questions:
-                response = search.invoke({"query": question})
-                result_items = response.get("results", [])
-                cleaned_items = [
-                    {
-                        "title": item.get("title", ""),
-                        "url": item.get("url", ""),
-                        "content": item.get("content", ""),
-                        "domain": urlparse(item.get("url", "")).netloc.lower(), #I dislike the double invocation of urlparse here, but it keeps the node decoupled from the specific SourceItem structure in the codebase
-                    }
-                for item in result_items
-                ]
-
-                sources_by_question[question] = cleaned_items
-                all_sources.extend(cleaned_items)
-            sources_by_category = sources_by_question
-        else:
+        if not messages:
+            section_title = state["section_title"]
+            questions = state["questions"]
+            research_iteration = state.get("research_iteration", 0)
             validated_sources = state.get("validated_sources", {})
-            sources_by_gap = {}
 
-            section_validation = validated_sources.get(section_title, {})
-            coverage_gaps = section_validation.get("coverage_gaps", [])
-            for gap in coverage_gaps:
-                response = search.invoke({"query": gap})
-                result_items = response.get("results", [])
-                cleaned_items = [
-                    {
-                        "title": item.get("title", ""),
-                        "url": item.get("url", ""),
-                        "content": item.get("content", ""),
-                        "domain": urlparse(item.get("url", "")).netloc.lower(), #I dislike the double invocation of urlparse here, but it keeps the node decoupled from the specific SourceItem structure in the codebase
-                    }
-                for item in result_items
-                ]
+            if research_iteration == 0:
+                task = "Questions to research:\n" + "\n".join(f"- {q}" for q in questions)
+            else:
+                gaps = validated_sources.get("coverage_gaps", [])
+                task = "Coverage gaps to fill:\n" + "\n".join(f"- {g}" for g in gaps)
 
-                sources_by_gap[gap] = cleaned_items
-                all_sources.extend(cleaned_items)
-            sources_by_category = sources_by_gap
+            messages = [
+                SystemMessage("You are collecting sources to answer research questions. "
+                              "Use Tavily to search for relevant sources. "
+                              "When you have enough results, stop calling tools."),
+                HumanMessage(f"Section: {section_title}\n{task}")
+            ]
 
-        seen_urls = set()
-        deduped_sources = []
+        response = llm_with_tools.invoke(messages)
+        logger.debug("Research agent generated response: %s", response)
+        return {"messages": [response]}   # add_messages reducer appends this
 
-        logger.info("Gathered sources for section '%s'. Initial sources count before deduplication: %d", section_title, len(all_sources))
+    return research_agent
 
-        for source in all_sources:
-            url = source.get("url", "")
-            if url not in seen_urls:
-                seen_urls.add(url)
-                deduped_sources.append(source)
 
-        all_sources = deduped_sources
+def extract_sources(state: SearchAgentState):
+    """
+    Tool loop is done. Pull raw results out of ToolMessages and reshape them
+    into the same candidate_sources structure the rest of the graph expects.
 
-        new_sources[section_title] = {
-            "questions": questions,
-            "sources_by_question": sources_by_category,
-            "all_sources": all_sources,
-        }
+    Reconstructs sources_by_question by matching each ToolMessage back to the
+    query the LLM used, via tool_call_id. Deduplicates all_sources by URL,
+    matching the behaviour of the previous search_sources_by_section node.
+    """
+    section_title = state["section_title"]
+    questions = state["questions"]
+    sources_by_question: dict[str, list] = {}
+    all_sources = []
+    seen_urls: set[str] = set()
 
-        logger.debug("Completed search for section '%s'. New sources count after deduplication: %d", section_title, len(all_sources))
-        
-        return {
-            "candidate_sources": new_sources,
-            "status": "Searched for sources."
-        }
+    logger.info("Extracting sources from tool messages for section '%s'. Total messages count: %d", section_title, len(state["messages"]))
 
-    return search_sources_by_section
+    # Build a map of tool_call_id → query string from every AIMessage that
+    # issued tool calls, so each ToolMessage can be tied back to its query.
+    query_map: dict[str, str] = {}
+    for msg in state["messages"]:
+        if hasattr(msg, "tool_calls"):
+            for tc in msg.tool_calls:
+                query_map[tc["id"]] = tc.get("args", {}).get("query", "")
+
+    for msg in state["messages"]:
+        if msg.type == "tool":
+            query = query_map.get(msg.tool_call_id, "")
+            try:
+                results = json.loads(msg.content).get("results", [])
+            except (json.JSONDecodeError, AttributeError):
+                results = []
+            items = [
+                {
+                    "title": item.get("title", ""),
+                    "url":   item.get("url", ""),
+                    "content": item.get("content", ""),
+                    "domain": urlparse(item.get("url", "")).netloc.lower(),
+                }
+                for item in results
+            ]
+            sources_by_question[query] = items
+            for item in items:
+                url = item.get("url", "")
+                if url not in seen_urls:
+                    seen_urls.add(url)
+                    all_sources.append(item)
+
+    logger.debug("Extracted %d unique sources for section '%s'.", len(all_sources), section_title)
+
+    return {"candidate_sources": {section_title: {
+        "questions": questions,
+        "sources_by_question": sources_by_question,
+        "all_sources": all_sources,
+    }}}
+
+
+def build_search_agent_graph(llm):
+    tavily = TavilySearch(max_results=5)
+    tool_node = ToolNode([tavily])
+
+    builder = StateGraph(SearchAgentState)
+    builder.add_node("research_agent", make_research_agent(llm, [tavily]))
+    builder.add_node("tools", tool_node)
+    builder.add_node("extract_sources", extract_sources)   # replaces the loop cleanup code
+
+    builder.add_edge(START, "research_agent")
+    builder.add_conditional_edges("research_agent", tools_condition, {
+        "tools": "tools",
+        END: "extract_sources"        # LLM stopped calling tools → extract results
+    })
+    builder.add_edge("tools", "research_agent")   # results feed back to LLM
+    builder.add_edge("extract_sources", END)
+
+    return builder.compile()

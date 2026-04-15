@@ -56,12 +56,19 @@ graph TD
         r1([START]) --> r2[initialize_research]
         r2 -->|"× N sections"| r3[generate_questions_for_section]
         r3 -->|fan-in| r_sync1[sync_after_questions]
-        r_sync1 -->|"× N incomplete"| r4[search_sources_by_section]
-        r4 -->|fan-in| r_sync2[sync_after_search]
+        r_sync1 -->|"× N incomplete"| sa1
+
+        subgraph SA [Search Agent Subgraph]
+            sa1[research_agent] -->|tool call| sa2["tools (Tavily)"]
+            sa2 --> sa1
+            sa1 -->|done| sa3[extract_sources]
+        end
+
+        sa3 -->|fan-in| r_sync2[sync_after_search]
         r_sync2 -->|"× N sections"| r5[evaluate_sources_by_section]
         r5 -->|fan-in| r6{identify_gaps}
         r6 -->|complete| r7([END])
-        r6 -->|"retry × N incomplete"| r4
+        r6 -->|"retry × N incomplete"| sa1
     end
 
     R --> W

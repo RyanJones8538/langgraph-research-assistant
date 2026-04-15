@@ -17,13 +17,13 @@ CREATE TABLE IF NOT EXISTS run_state (
     validated_sources JSONB,
     candidate_sources JSONB,
     research_iteration INTEGER DEFAULT 0,
-    should_research_continue BOOLEAN DEFAULT FALSE,
-    research_complete JSONB,
+    research_done BOOLEAN DEFAULT FALSE,
+    research_complete_by_section JSONB,
     writing_iteration INTEGER DEFAULT 0,
     writing_draft JSONB,
     writing_feedback JSONB,
-    should_writer_continue BOOLEAN DEFAULT FALSE,
-    writing_complete JSONB,
+    writing_done BOOLEAN DEFAULT FALSE,
+    writing_complete_by_section JSONB,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     last_updated_at TIMESTAMPTZ DEFAULT NOW()
 );
