@@ -2,7 +2,7 @@ from app.config import NUM_WRITING_ITERATIONS
 from app.state.run_state import update_run_state
 
 
-def generate_check_writer_complete():
+def make_check_writer_complete():
     def write_final_report(outline_object: dict[str, list[str]], section_drafts: dict[str, str]) -> dict:
         """
         Writes the final report based on the section drafts and the outline object.

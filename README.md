@@ -12,6 +12,23 @@ are useless elsewhere. A human-in-the-loop interrupt at the outlining phase allo
 
 To run, run the docker compose up --build in the langgraph-research-assistant folder. The app will appear on localhost:3000.
 
+## Running unit tests
+
+Install dependencies first:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+Then run tests with:
+
+```bash
+python -m pytest tests/unit -q
+```
+
+Note: On some systems (especially Windows/PowerShell), `pytest` may not be available as a standalone command even when installed. `python -m pytest ...` is the most portable way to run the test suite.
+
+
 Tech Stack:
 	LangGraph for agent coordination
 	OpenAI gpt-4o-mini for the LLMs themselves

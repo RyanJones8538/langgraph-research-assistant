@@ -9,3 +9,4 @@ psycopg[binary]
 python-dotenv
 openai
 uvicorn
+pytest>=8.0

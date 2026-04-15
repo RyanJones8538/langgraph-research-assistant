@@ -52,8 +52,6 @@ def make_parse_review(llm):
         if normalized_comment in {"revise", "change", "edit", "update", "no", "n"}:
             return {"review_action": "revise"}
 
-        model = llm()
-
         prompt = f"""
                 Parse the following information to determine the user's intent:
                 This is a response to the question, "Do you approve of this outline?"

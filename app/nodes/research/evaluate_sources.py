@@ -22,6 +22,10 @@ def normalize_domain(url: str) -> str:
         normalized domain string extracted from the URL, or an empty string if the URL is invalid or the domain cannot be extracted.
     """
     try:
+        if not url:
+            return ""
+        if "://" not in url:
+            url = "http://" + url
         return urlparse(url).netloc.lower()
     except Exception:
         return ""

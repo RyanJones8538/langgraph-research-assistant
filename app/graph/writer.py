@@ -1,7 +1,7 @@
 from langgraph.graph import END, START, StateGraph
 
 from app.config import editor_llm, get_llm
-from app.nodes.writer.check_writer_complete import generate_check_writer_complete
+from app.nodes.writer.check_writer_complete import make_check_writer_complete
 from app.nodes.writer.edit_report import make_edit_report
 from app.nodes.writer.write_report import make_write_report_by_section
 from app.state.graph_state import WriterState
@@ -126,7 +126,7 @@ def build_writer_graph():
     builder.add_node("writer", make_write_report_by_section(get_llm))
     builder.add_node("sync_after_write", sync_after_write)
     builder.add_node("editor", make_edit_report(editor_llm))
-    builder.add_node("check_writer_complete", generate_check_writer_complete())
+    builder.add_node("check_writer_complete", make_check_writer_complete())
 
     builder.add_edge(START, "initialize_writer")
     builder.add_conditional_edges(
