@@ -39,6 +39,22 @@ class SectionQuestionInput(TypedDict):
     topic: str
     section_title: str
 
+class SectionEditorInput(TypedDict):
+    request_id: str
+    section_title: str
+    section_questions: list[str]
+    section_draft: str
+
+class SectionWriterInput(TypedDict):
+    request_id: str
+    topic: str
+    section_title: str
+    outline_object: dict[str, list[str]]
+    section_questions: list[str]
+    validated_sources: dict
+    section_draft: str
+    writing_feedback: dict
+
 class EvaluatedSource(BaseModel):
     title: str = Field(description="Title of the source")
     url: str = Field(description="URL of the source")

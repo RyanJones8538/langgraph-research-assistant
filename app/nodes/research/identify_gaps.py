@@ -22,6 +22,7 @@ def make_identify_gaps():
         number_of_research_runs = state.get("research_iteration", 0)
         research_complete = state.get("research_complete", {})
         update_run_state(state.get("request_id", ), validated_sources=state.get("validated_sources", {}), last_completed_node="evaluate_sources", status="Evaluated quality of sources.")
+        
         should_research_continue = True
         number_of_research_runs+=1
 

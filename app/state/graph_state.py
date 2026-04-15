@@ -43,8 +43,9 @@ class WriterState(TypedDict):
     section_questions: dict[str, list[str]]
     validated_sources: dict[str, dict]
     writing_iteration: int
-    writing_draft: Annotated[dict, operator.or_]
-    writing_feedback: Annotated[dict[str, str], operator.or_]
+    # Flat maps of section_title -> value; operator.or_ merges across parallel nodes.
+    writing_draft: Annotated[dict[str, str], operator.or_]
+    writing_feedback: Annotated[dict[str, dict], operator.or_]
     should_writer_continue: bool
     writing_complete: Annotated[dict[str, bool], operator.or_]
     final_report: dict | None

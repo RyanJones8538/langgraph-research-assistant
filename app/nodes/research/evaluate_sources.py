@@ -1,7 +1,6 @@
 from urllib.parse import urlparse
 
 from app.models.classes import EvaluatedSource, SectionEvaluationInput, SourceItem
-from app.state.run_state import update_run_state
 
 
 BLOCKED_DOMAINS = {
@@ -220,7 +219,7 @@ def make_evaluate_evidence_by_section(llm):
             "dropped_sources": dropped_dicts,
             "coverage_gaps": result.coverage_gaps,
         }
-        update_run_state(state.get("request_id", ), validated_sources=validated_sources, last_completed_node="evaluate_sources", status="Evaluated quality of sources.")
+        
         return {
             "validated_sources": validated_sources,
             "status": "Evaluated quality of sources."

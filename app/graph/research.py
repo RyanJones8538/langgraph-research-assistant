@@ -28,15 +28,22 @@ def dispatch_section_questions(state: ResearchState):
             }))
     return targets
 
+def sync_after_questions(state: ResearchState):
+    """
+    Fan-in synchronization node. Runs once after ALL parallel generate_questions_for_section
+    nodes complete and their section_questions have been merged. Updating run state here
+    (rather than in the dispatch function) ensures it happens exactly once with the full picture.
+    """
+    update_run_state(state.get("request_id", ""), section_questions=state["section_questions"],
+                     last_completed_node="generate_questions_for_section", status="Generated research questions.")
+    return {}
+
 def dispatch_search_sources(state: ResearchState):
     section_questions = state["section_questions"]
     research_complete = state["research_complete"]
     research_iteration = state.get("research_iteration", 0)
     validated_sources = state.get("validated_sources", {})
-    request_id = state.get("request_id", "")
 
-    update_run_state(request_id, section_questions=section_questions,
-                         last_completed_node="generate_questions_for_section", status="Generated research questions.")
     targets = []
     for section_title, questions in section_questions.items():
         if research_complete[section_title] == False:
@@ -50,6 +57,15 @@ def dispatch_search_sources(state: ResearchState):
             }))
     return targets
 
+def sync_after_search(state: ResearchState):
+    """
+    Fan-in synchronization node. Runs once after ALL parallel search_sources_by_section
+    nodes complete and their candidate_sources have been merged.
+    """
+    update_run_state(state.get("request_id", ""), candidate_sources=state.get("candidate_sources", {}),
+                     last_completed_node="search_sources_by_section", status="Searched for sources.")
+    return {}
+
 def dispatch_evaluate_sources(state: ResearchState):
     research_iteration = state.get("research_iteration", 0)
     request_id = state.get("request_id", "")
@@ -58,10 +74,8 @@ def dispatch_evaluate_sources(state: ResearchState):
     validated_sources = state.get("validated_sources", {})
     section_questions = state.get("section_questions", {})
 
-    update_run_state(request_id, candidate_sources=candidate_sources,
-                         last_completed_node="search_sources_by_section", status="Searched for sources.")
     targets = []
-    for section_title, sources in candidate_sources.items():    
+    for section_title, sources in candidate_sources.items():
         targets.append(Send("evaluate_sources_by_section", {
             "request_id": request_id,
             "section_title": section_title,
@@ -79,7 +93,7 @@ def route_research(state):
     Args:
         state: The current state of the graph.
     Returns:
-        String which corresponds to the next node to route to, either "continue" or "retry"
+        Either END if research is complete, or list of Send targets to route back to search sources for sections that are not complete.
     """
     if state["should_research_continue"]:
         return END
@@ -110,10 +124,11 @@ def build_research_graph():
     # Generate Graph Nodes
     builder.add_node("initialize_research", initialize_research_state)
     builder.add_node("generate_questions_for_section", make_generate_questions_for_section(question_llm))
+    builder.add_node("sync_after_questions", sync_after_questions)
     builder.add_node("search_sources_by_section", make_search_sources_by_section())
+    builder.add_node("sync_after_search", sync_after_search)
     builder.add_node("evaluate_sources_by_section", make_evaluate_evidence_by_section(validation_llm))
     builder.add_node("identify_gaps", make_identify_gaps())
-
 
     # Generate Graph Edges
     builder.add_edge(START, "initialize_research")
@@ -123,14 +138,15 @@ def build_research_graph():
         # No dict needed — Send targets are dynamic
     )
 
-    builder.add_conditional_edges(
-        "generate_questions_for_section",
-        dispatch_search_sources,
-    )
-    builder.add_conditional_edges(
-        "search_sources_by_section",
-        dispatch_evaluate_sources,
-    )
+    # Fan-in: all parallel generate_questions_for_section instances converge here,
+    # then dispatch_search_sources is called exactly once with the fully merged state.
+    builder.add_edge("generate_questions_for_section", "sync_after_questions")
+    builder.add_conditional_edges("sync_after_questions", dispatch_search_sources)
+
+    # Fan-in: all parallel search_sources_by_section instances converge here,
+    # then dispatch_evaluate_sources is called exactly once.
+    builder.add_edge("search_sources_by_section", "sync_after_search")
+    builder.add_conditional_edges("sync_after_search", dispatch_evaluate_sources)
 
     builder.add_edge("evaluate_sources_by_section", "identify_gaps")
     builder.add_conditional_edges("identify_gaps", route_research)

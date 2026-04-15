@@ -1,11 +1,8 @@
-from typing import TypedDict
-
 from app.config import MAX_RESULTS_PER_QUERY
 from langchain_tavily import TavilySearch
 from urllib.parse import urlparse
 
 from app.models.classes import SectionSourceInput
-from app.state.run_state import update_run_state
 
 
 
@@ -59,10 +56,6 @@ def make_search_sources_by_section():
             sources_by_category = sources_by_question
         else:
             validated_sources = state.get("validated_sources", {})
-            research_complete = state.get("research_complete", {})
-            if research_complete == True:
-                return {}
-                
             sources_by_gap = {}
 
             section_validation = validated_sources.get(section_title, {})

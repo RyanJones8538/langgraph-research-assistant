@@ -37,22 +37,26 @@ graph TD
 
     subgraph R [Research Subgraph]
         r1([START]) --> r2[initialize_research]
-        r2 --> r3[generate_questions]
-        r3 --> r4[search_sources]
-        r4 --> r5[evaluate_sources]
-        r5 --> r6{identify_gaps}
-        r6 -->|gaps filled| r7([END])
-        r6 -->|retry| r4
+        r2 -->|"× N sections"| r3[generate_questions_for_section]
+        r3 -->|fan-in| r_sync1[sync_after_questions]
+        r_sync1 -->|"× N incomplete"| r4[search_sources_by_section]
+        r4 -->|fan-in| r_sync2[sync_after_search]
+        r_sync2 -->|"× N sections"| r5[evaluate_sources_by_section]
+        r5 -->|fan-in| r6{identify_gaps}
+        r6 -->|complete| r7([END])
+        r6 -->|"retry × N incomplete"| r4
     end
 
     R --> W
 
     subgraph W [Writer Subgraph]
         w1([START]) --> w2[initialize_writer]
-        w2 --> w3[writer]
-        w3 --> w4{editor}
-        w4 -->|all sections pass| w5([END])
-        w4 -->|retry| w3
+        w2 -->|"× N sections"| w3[writer]
+        w3 -->|fan-in| w_sync[sync_after_write]
+        w_sync -->|"× N incomplete"| w4[editor]
+        w4 -->|fan-in| w5{check_writer_complete}
+        w5 -->|complete| w6([END])
+        w5 -->|"retry × N incomplete"| w3
     end
 
     W --> END3([END])
