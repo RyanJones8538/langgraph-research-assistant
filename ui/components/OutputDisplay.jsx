@@ -1,3 +1,5 @@
+import ReactMarkdown from "react-markdown";
+
 function tryParseJsonObject(text) {
   try {
     const parsed = JSON.parse(text);
@@ -87,11 +89,11 @@ function FinalReportDisplay({ data }) {
       {data.sections.map((section, i) => (
         <div key={i} style={{ marginBottom: "1.5rem" }}>
           <h2 style={{ margin: "0 0 0.4rem" }}>{section.title}</h2>
-          {section.text && <p style={{ margin: "0 0 0.8rem" }}>{section.text}</p>}
+          {section.text && <ReactMarkdown>{section.text}</ReactMarkdown>}
           {section.subsections.map((sub, j) => (
             <div key={j} style={{ marginBottom: "0.8rem", marginLeft: "1.25rem" }}>
               <h3 style={{ margin: "0 0 0.3rem" }}>{sub.title}</h3>
-              {sub.text && <p style={{ margin: 0, fontSize: "0.95rem" }}>{sub.text}</p>}
+              {sub.text && <ReactMarkdown>{sub.text}</ReactMarkdown>}
             </div>
           ))}
         </div>

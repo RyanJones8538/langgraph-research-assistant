@@ -46,8 +46,13 @@ def run_llm_writer(section_name: str, topic: str, outline_object: dict[str, list
         Do not add characters or commentary that are not appropriate for the report format. Only return the report content itself without any additional commentary or characters.
         Remember, you are writing a report with many sections. Examine the structure of the outline and make sure that you keep to the topic within that outline.
         Assume the other sections have been written by other agents. You are only responsible for writing the section specified in {section_name}.
-        If the section you are writing has subsections, you should write the main section content as an introduction to the subsections, which will be written by other agents. If the section you are writing does not have subsections, just write the section content.
-        Do not introduce the reader to the basics of the topic in every section and subsection. Only introduce the basics in the introduction section of the report, and then assume that the reader has that basic knowledge for the rest of the sections and subsections.
+        If the section you are writing has subsections, you should write the main section content as an introduction to the subsections, which will be written by other agents. 
+        If the section you are writing does not have subsections, just write the section content.
+        Do not introduce the reader to the basics of the topic in every section and subsection. 
+        Only introduce the basics in the introduction section of the report, and then assume that the reader has that basic knowledge for the rest of the sections and subsections.
+        The display I use already handles section and subsection titles, so you do not need to include the section or subsection title in the text you return. Just return the content of the section.
+        This is part of a larger report, so don't use language like 'in summary' or 'in conclusion' since this is not a standalone report. 
+        Just write the content for the section as if it will be read in the context of the larger report.
         Here is the topic of the report:
         {topic}
         Here is the outline of the report:

@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS run_state (
     outline_history JSONB,
     review_action TEXT,
     review_comment TEXT,
+    final_report JSONB,
     validated_sources JSONB,
     candidate_sources JSONB,
     research_iteration INTEGER DEFAULT 0,

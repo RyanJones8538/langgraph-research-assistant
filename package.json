@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@langchain/langgraph-checkpoint-postgres": "^1.0.1",
-    "ps": "^1.0.0"
+    "ps": "^1.0.0",
+    "react-markdown": "^10.1.0"
   }
 }

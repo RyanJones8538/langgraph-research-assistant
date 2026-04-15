@@ -108,6 +108,14 @@ export default function App() {
                 ? "complete"
                 : "running",
           }));
+        } else if (event.type === "error") {
+          setViewState((previous) => ({
+            ...previous,
+            loading: false,
+            error: event.message,
+            status: "Run failed.",
+            runPhase: "idle",
+          }));
         }
       }
     } catch (error) {
@@ -160,6 +168,14 @@ export default function App() {
               : hasGraphInterrupt(event)
                 ? "awaiting_review"
                 : "running",
+          }));
+        } else if (event.type === "error") {
+          setViewState((previous) => ({
+            ...previous,
+            loading: false,
+            error: event.message,
+            status: "Run failed.",
+            runPhase: "awaiting_review",
           }));
         }
       }

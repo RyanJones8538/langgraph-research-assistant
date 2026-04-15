@@ -30,18 +30,20 @@ if not DATABASE_URL:
         )
     DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-DEBUG_MODE = os.getenv("DEBUG_MODE", "true").lower() == "true"
+DEBUG_MODE = os.getenv("DEBUG_MODE", "true").lower() == "false"
 MAX_SECTIONS = int(os.getenv("MAX_SECTIONS", "2"))
 MAX_SUBSECTIONS_PER_SECTION = int(os.getenv("MAX_SUBSECTIONS_PER_SECTION", "2"))
 MAX_QUESTIONS_PER_SECTION = int(os.getenv("MAX_QUESTIONS_PER_SECTION", "2"))
-MAX_RESULTS_PER_QUERY = int(os.getenv("MAX_RESULTS_PER_QUERY", "2"))
+MAX_RESULTS_PER_QUERY = int(os.getenv("MAX_RESULTS_PER_QUERY", "5"))
 NUM_RESEARCH_ITERATIONS = int(os.getenv("NUM_RESEARCH_ITERATIONS", "3"))
-NUM_SOURCES_NEEDED_FOR_SECTION = int(os.getenv("NUM_SOURCES_NEEDED_FOR_SECTION", "1"))
+NUM_SOURCES_NEEDED_FOR_SECTION = int(os.getenv("NUM_SOURCES_NEEDED_FOR_SECTION", "3"))
 NUM_WRITING_ITERATIONS = int(os.getenv("NUM_WRITING_ITERATIONS", "3"))
+
+MODEL_CHOICE = os.getenv("MODEL_CHOICE", "gpt-4o-mini")
 
 def get_llm() -> ChatOpenAI:
     return ChatOpenAI(
-        model="gpt-4o",
+        model=MODEL_CHOICE,
         temperature=0,
     )
 

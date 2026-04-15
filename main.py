@@ -30,6 +30,17 @@ def run_graph_with_status_history(graph, graph_input, config):
     final_state["status_history"] = status_history
     return final_state
 
+def _readable_error(exc: Exception) -> str:
+    """
+    Extracts a human-readable message from an exception.
+    OpenAI/Anthropic API errors expose a .body dict with a 'message' key;
+    fall back to str(exc) for anything else.
+    """
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict) and "message" in body:
+        return body["message"]
+    return str(exc)
+
 def stream_graph_events(graph, graph_input, config):
     """
     Sync generator that yields SSE-formatted strings from graph execution.
@@ -38,38 +49,45 @@ def stream_graph_events(graph, graph_input, config):
     writer subgraphs are surfaced in real time, not just when the subgraph
     finishes and hands control back to the root graph.
 
-    Emits two event types:
+    Emits three event types:
       {"type": "status_update", "status": "..."}  — one per distinct status value
+      {"type": "token", "node": "...", "content": "..."}  — one per LLM token
       {"type": "result", ...full OutlineState}     — final event with complete state
+      {"type": "error", "message": "..."}          — emitted if graph execution fails
     """
     status_history: list[str] = []
     last_root_state: dict = {}
 
-    # With stream_mode as a list and subgraphs=True, each item is a flat 3-tuple:
-    # (namespace, mode, data) where mode is "values" or "messages".
-    for namespace, mode, data in graph.stream(
-        graph_input, config, stream_mode=["values", "messages"], subgraphs=True
-    ):
-        if mode == "values":
-            if namespace == ():
-                last_root_state = data
-            status = data.get("status")
-            if isinstance(status, str) and status:
-                if not status_history or status_history[-1] != status:
-                    status_history.append(status)
-                    yield f"data: {json.dumps({'type': 'status_update', 'status': status})}\n\n"
+    try:
+        # With stream_mode as a list and subgraphs=True, each item is a flat 3-tuple:
+        # (namespace, mode, data) where mode is "values" or "messages".
+        for namespace, mode, data in graph.stream(
+            graph_input, config, stream_mode=["values", "messages"], subgraphs=True
+        ):
+            if mode == "values":
+                if namespace == ():
+                    last_root_state = data
+                status = data.get("status")
+                if isinstance(status, str) and status:
+                    if not status_history or status_history[-1] != status:
+                        status_history.append(status)
+                        yield f"data: {json.dumps({'type': 'status_update', 'status': status})}\n\n"
 
-        elif mode == "messages":
-            # data is (AIMessageChunk, metadata_dict). metadata contains the
-            # originating node name under the key "langgraph_node".
-            # The node name is forwarded to the frontend so the token stream
-            # can group and label output per node, including structured-output
-            # nodes whose tool-call JSON is rendered as formatted fields.
-            chunk, metadata = data
-            node = metadata.get("langgraph_node", "")
-            content = chunk.content
-            if isinstance(content, str) and content:
-                yield f"data: {json.dumps({'type': 'token', 'node': node, 'content': content})}\n\n"
+            elif mode == "messages":
+                # data is (AIMessageChunk, metadata_dict). metadata contains the
+                # originating node name under the key "langgraph_node".
+                # The node name is forwarded to the frontend so the token stream
+                # can group and label output per node, including structured-output
+                # nodes whose tool-call JSON is rendered as formatted fields.
+                chunk, metadata = data
+                node = metadata.get("langgraph_node", "")
+                content = chunk.content
+                if isinstance(content, str) and content:
+                    yield f"data: {json.dumps({'type': 'token', 'node': node, 'content': content})}\n\n"
+
+    except Exception as exc:
+        yield f"data: {json.dumps({'type': 'error', 'message': _readable_error(exc)})}\n\n"
+        return
 
     last_root_state["status_history"] = status_history
     # Strip LangGraph runtime-internal keys (e.g. __interrupt__) that are not

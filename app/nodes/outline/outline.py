@@ -1,8 +1,14 @@
 import json
+import re
 
 from app.config import DEBUG_MODE, MAX_SECTIONS, MAX_SUBSECTIONS_PER_SECTION
 
 from app.state.run_state import update_run_state
+
+def _strip_numbering(title: str) -> str:
+    """Remove leading numeric prefixes like '1.', '1.2', '1.2.' that the LLM
+    may echo back from outline_history on revision iterations."""
+    return re.sub(r'^\d+(\.\d+)*\.?\s*', '', title).strip()
 
 def render_outline(sections):
     """
@@ -60,7 +66,7 @@ def make_generate_outline(llm):
         if isinstance(parsed, dict) and "outline_formatted" in parsed:
             parsed = parsed["outline_formatted"]
         if isinstance(parsed, dict):
-            return {str(k): [str(item) for item in v] for k, v in parsed.items()}
+            return {_strip_numbering(str(k)): [_strip_numbering(str(item)) for item in v] for k, v in parsed.items()}
         raise ValueError("Outline response must be a JSON object.")
 
     def generate_outline(state):
