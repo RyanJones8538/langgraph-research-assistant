@@ -1,4 +1,6 @@
 import json
+import logging
+
 from uuid import uuid4
 from contextlib import ExitStack, asynccontextmanager
 
@@ -13,6 +15,12 @@ from app.config import DATABASE_URL
 from app.graph.builder import OutlineState, build_graph
 
 load_dotenv()
+
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s %(levelname)s %(name)s — %(message)s"
+)
+
+logger = logging.getLogger(__name__)
 
 def run_graph_with_status_history(graph, graph_input, config):
     """
@@ -129,6 +137,7 @@ def start_run_stream(payload: StartRunRequest, request: Request):
     followed by a final result event containing the full state.
     """
     request_id = str(uuid4())
+    logger.info("Starting new run with request ID: %s, topic: '%s', thread ID: %s", request_id, payload.topic, payload.thread_id)
     initial_state: OutlineState = {
         "request_id": request_id,
         "thread_id": payload.thread_id,
@@ -167,6 +176,7 @@ def resume_run_stream(payload: ResumeRunRequest, request: Request):
     SSE endpoint: resumes a previously interrupted run and streams status_update
     events in real time, followed by a final result event.
     """
+    logger.info("Resuming run for thread ID: %s with user reply: '%s'", payload.thread_id, payload.user_reply)
     config = {"configurable": {"thread_id": payload.thread_id}}
     return StreamingResponse(
         stream_graph_events(
@@ -194,6 +204,7 @@ def start_run(payload: StartRunRequest, request: Request):
     Returns:
         Research Graph
     """
+    logger.info("Starting new run with topic: '%s' and thread ID: %s", payload.topic, payload.thread_id)
     request_id = str(uuid4())
 
     initial_state: OutlineState = {
@@ -232,6 +243,7 @@ def resume_run(payload: ResumeRunRequest, request: Request):
         Restarted graph after user reply, which should continue execution from the interrupt and update state in Postgres.
     """
     # user_reply examples: "approve", "cancel", "revise: add section on ..."
+    logger.info("Resuming run for thread ID: %s with user reply: '%s'", payload.thread_id, payload.user_reply)
     return run_graph_with_status_history(
         request.app.state.graph,
         Command(resume=payload.user_reply),

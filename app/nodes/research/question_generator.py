@@ -1,5 +1,9 @@
+import logging
+
 from app.config import DEBUG_MODE, MAX_QUESTIONS_PER_SECTION
 from app.models.classes import SectionQuestionInput
+
+logger = logging.getLogger(__name__)
 
 def make_generate_questions_for_section(llm):
     """
@@ -21,7 +25,11 @@ def make_generate_questions_for_section(llm):
         topic = state["topic"]
         section_title = state["section_title"]
 
+        logger.info("Generating research questions for section '%s' of topic '%s'.", section_title, topic)
+
         result = make_questions(model, topic, section_title)
+
+        logger.debug("Generated questions for section '%s': %s", section_title, result.questions)
 
         return {
             "section_questions": {section_title: result.questions},

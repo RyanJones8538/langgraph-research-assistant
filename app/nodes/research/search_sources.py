@@ -1,10 +1,12 @@
+import logging
+
 from app.config import MAX_RESULTS_PER_QUERY
 from langchain_tavily import TavilySearch
 from urllib.parse import urlparse
 
 from app.models.classes import SectionSourceInput
 
-
+logger = logging.getLogger(__name__)
 
 def make_search_sources_by_section():
     """
@@ -30,6 +32,9 @@ def make_search_sources_by_section():
         questions = state["questions"]
         research_iteration = state.get("research_iteration")
         section_title = state["section_title"]
+
+        logger.info("Searching for sources for section '%s'. Research iteration: %d. Questions count: %d", section_title, research_iteration, len(questions))
+
         sources_by_category = {}
         
         all_sources = []
@@ -80,6 +85,8 @@ def make_search_sources_by_section():
         seen_urls = set()
         deduped_sources = []
 
+        logger.info("Gathered sources for section '%s'. Initial sources count before deduplication: %d", section_title, len(all_sources))
+
         for source in all_sources:
             url = source.get("url", "")
             if url not in seen_urls:
@@ -93,6 +100,9 @@ def make_search_sources_by_section():
             "sources_by_question": sources_by_category,
             "all_sources": all_sources,
         }
+
+        logger.debug("Completed search for section '%s'. New sources count after deduplication: %d", section_title, len(all_sources))
+        
         return {
             "candidate_sources": new_sources,
             "status": "Searched for sources."

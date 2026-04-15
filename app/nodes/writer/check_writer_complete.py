@@ -1,6 +1,9 @@
+import logging
+
 from app.config import NUM_WRITING_ITERATIONS
 from app.state.run_state import update_run_state
 
+logger = logging.getLogger(__name__)
 
 def make_check_writer_complete():
     def write_final_report(outline_object: dict[str, list[str]], section_drafts: dict[str, str]) -> dict:
@@ -28,9 +31,12 @@ def make_check_writer_complete():
         writing_complete = state.get("writing_complete", {})
         outline_object = state.get("outline_object", {})
         writing_iteration = state.get("writing_iteration", 0)
+        request_id = state.get("request_id", "")
 
-        update_run_state(state.get("request_id", ""), status="Edited report draft.", writing_iteration=state.get("writing_iteration", 0), should_writer_continue=state.get("should_writer_continue", False),
+        update_run_state(request_id, status="Edited report draft.", writing_iteration=state.get("writing_iteration", 0), should_writer_continue=state.get("should_writer_continue", False),
                          writing_complete=writing_complete, writing_feedback=state.get("writing_feedback", {}), last_completed_node="editor")
+
+        logger.info("Checking if writing is complete for request ID: %s. Current writing iteration: %d. Writing complete status: %s", request_id, writing_iteration, writing_complete)
 
         should_writer_continue = False
         falsesFound = False
@@ -49,12 +55,16 @@ def make_check_writer_complete():
                         break
             if not falsesFound:
                 should_writer_continue = True
+
+        logger.info("Determined should_writer_continue: %s for request ID: %s after checking writing completion. Number of iterations: %d", should_writer_continue, request_id, number_of_iterations)
         
         status = "Writing in progress."
         final_report = {}
         if should_writer_continue:
                 status = "Completed writing iterations."
                 final_report = write_final_report(outline_object, state.get("writing_draft", {}))
+
+        logger.debug("Final report structure for request ID: %s: %s", request_id, final_report)
 
         update_run_state(state.get("request_id", ""), status=status, should_writer_continue=should_writer_continue,
                          writing_iteration=number_of_iterations, last_completed_node="check_writer_complete", final_report=final_report)

@@ -1,5 +1,8 @@
+import logging
+
 from app.config import DEBUG_MODE
 
+logger = logging.getLogger(__name__)
 
 def make_edit_report(llm):
     """
@@ -25,6 +28,8 @@ def make_edit_report(llm):
         section_questions = state["section_questions"]
         section_draft = state.get("section_draft", "N/A")
 
+        logger.info("Editing report for section '%s'. Current draft length: %d characters. Section questions count: %d", section_title, len(section_draft), len(section_questions))
+
         section_feedback = {}
         writing_complete = {}
 
@@ -32,6 +37,8 @@ def make_edit_report(llm):
         writing_complete[section_title] = bool(section_feedback[section_title].get("pass_or_fail", False))
 
         status = "Edited report draft."
+
+        logger.debug("Section feedback for section '%s': %s", section_title, section_feedback[section_title])
 
         return {
             "writing_complete": writing_complete,

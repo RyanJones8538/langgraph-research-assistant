@@ -1,5 +1,9 @@
+import logging
+
 from langgraph.types import interrupt
 from app.state.run_state import update_run_state
+
+logger = logging.getLogger(__name__)
 
 def make_request_outline_review(state):
     def request_outline_review(state):
@@ -9,6 +13,7 @@ def make_request_outline_review(state):
         """
         request_id = state.get("request_id", "")
         request_messages = state.get("request_messages", [])
+        logger.info("Requesting user review of outline. Request ID: %s. Current outline: %s", request_id, state.get("current_outline", ""))
         review_comment = interrupt(
             {
                 "message": "Do you approve of this outline?",
@@ -23,6 +28,7 @@ def make_request_outline_review(state):
             status="Requested user review of outline.",
             last_completed_node="request_outline_review",
         )
+        logger.debug("User review comment received: %s. Updated request messages: %s", review_comment, request_messages)
         return {
             "review_comment": review_comment,
             "request_messages": request_messages,

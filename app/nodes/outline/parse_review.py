@@ -1,4 +1,8 @@
+import logging
+
 from app.state.run_state import update_run_state
+
+logger = logging.getLogger(__name__)
 
 def make_parse_review(llm):
     """
@@ -40,6 +44,8 @@ def make_parse_review(llm):
         review_comment = state.get("review_comment")
         request_id = state.get("request_id", "")
 
+        logger.info("Parsing user review comment: %s", review_comment)
+
         normalized_comment = _normalize_review_comment(review_comment)
 
         # Prefer deterministic parsing to avoid LLM misclassification loops.
@@ -51,6 +57,8 @@ def make_parse_review(llm):
 
         if normalized_comment in {"revise", "change", "edit", "update", "no", "n"}:
             return {"review_action": "revise"}
+        
+        logger.info("Review comment did not match any keywords, invoking LLM to parse review action.")
 
         prompt = f"""
                 Parse the following information to determine the user's intent:
@@ -65,6 +73,8 @@ def make_parse_review(llm):
                 Do not include any additional text or explanation in your response.
                 """
         review_action =str(model.invoke(prompt).content).strip().lower().strip("\"'")
+
+        logger.debug("LLM parsed review action: %s", review_action)
 
         update_run_state(request_id, review_action=review_action, last_completed_node="parse_review", status="Evaluated user comment.")
         return {

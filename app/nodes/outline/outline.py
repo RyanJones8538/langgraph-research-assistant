@@ -1,9 +1,12 @@
 import json
+import logging
 import re
 
 from app.config import DEBUG_MODE, MAX_SECTIONS, MAX_SUBSECTIONS_PER_SECTION
 
 from app.state.run_state import update_run_state
+
+logger = logging.getLogger(__name__)
 
 def _strip_numbering(title: str) -> str:
     """Remove leading numeric prefixes like '1.', '1.2', '1.2.' that the LLM
@@ -87,6 +90,7 @@ def make_generate_outline(llm):
         review_comment = state.get("review_comment", "")
         prior_outlines = state.get("outline_history", [])
         request_id = state.get("request_id", "")
+        logger.info("Generating outline. Topic: %s. User messages: %s. Prior outlines count: %d. User feedback: %s", topic, messages, len(prior_outlines), review_comment)
 
         prompt = f"""
                 You are generating a research outline.
@@ -117,9 +121,10 @@ def make_generate_outline(llm):
         raw_outline = model.invoke(prompt)
         new_outline = _parse_outline(raw_outline)
         outline_text = render_outline(new_outline)
-        print(new_outline)
 
         outline_history = prior_outlines + [outline_text]
+
+        logger.debug("Generated outline: %s", outline_text)
 
         update_run_state(request_id, current_outline=outline_text, outline_object=new_outline, outline_history=outline_history,
                           status="Generating outline.", last_completed_node="generate_outline")

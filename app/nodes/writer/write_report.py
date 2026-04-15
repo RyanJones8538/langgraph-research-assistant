@@ -1,3 +1,7 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
 def make_write_report_by_section(llm):
     """
     Wrapper function to create write_report node for writer graph.
@@ -25,7 +29,11 @@ def make_write_report_by_section(llm):
         topic = state["topic"]
         section_title = state["section_title"]
 
+        logger.info("Writing report for section '%s' of topic '%s'. Current draft length: %d characters. Section questions count: %d. Validated sources count: %d.", section_title, topic, len(section_draft), len(section_questions), len(validated_sources.get("kept_sources", [])))
+
         section_text = run_llm_writer(section_title, topic, outline_object, section_questions, validated_sources, section_draft, writing_feedback, llm)
+
+        logger.debug("Generated draft for section '%s': %s", section_title, section_text)
 
         return {
             "writing_draft": {section_title: section_text},

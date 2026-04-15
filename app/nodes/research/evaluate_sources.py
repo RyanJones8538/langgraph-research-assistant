@@ -1,7 +1,10 @@
+import logging
+
 from urllib.parse import urlparse
 
 from app.models.classes import EvaluatedSource, SectionEvaluationInput, SourceItem
 
+logger = logging.getLogger(__name__)
 
 BLOCKED_DOMAINS = {
     "facebook.com",
@@ -155,14 +158,20 @@ def make_evaluate_evidence_by_section(llm):
         complete_validation = state.get("validated_sources", {})
         research_iteration = state.get("research_iteration", 0)
 
+        logger.info("Evaluating sources for section '%s'. Candidate sources count: %d. Research iteration: %d", section_title, len(candidate_sources.get("all_sources", [])), research_iteration)
+
         validated_sources: dict[str, dict] = {}
         raw_candidates = candidate_sources["all_sources"]
 
         # 1. Deduplicate raw search results
         deduped_candidates = dedupe_sources(raw_candidates)
 
+        logger.info("Deduplicated sources for section '%s'. Remaining sources count after deduplication: %d", section_title, len(deduped_candidates))
+
         # 2. Deterministic filtering
         prelim_kept, prelim_dropped = deterministic_filter(deduped_candidates)
+
+        logger.info("Deterministic filtering for section '%s'. Remaining sources count after deterministic filtering: %d. Dropped sources count: %d", section_title, len(prelim_kept), len(prelim_dropped))
 
         # If nothing survives deterministic filtering, record the gap and continue
         if not prelim_kept:
@@ -176,6 +185,7 @@ def make_evaluate_evidence_by_section(llm):
             return {
                 "validated_sources": {section_title: validated_sources[section_title]}
             }
+        logger.info("Sources have survived deterministic filtering for section '%s'. Remaining sources count: %d", section_title, len(prelim_kept))
         if research_iteration > 0:
             previous_result = complete_validation
             if previous_result:
@@ -183,6 +193,8 @@ def make_evaluate_evidence_by_section(llm):
                 prelim_kept = remove_previously_kept_sources(
                     prelim_kept, previous_result.get("kept_sources", [])
                 )
+
+        logger.info("Sources remaining for LLM evaluation for section '%s' after removing previously kept sources: %d", section_title, len(prelim_kept))
         # 3. LLM evaluation of remaining sources
         prompt = f"""
             You are evaluating research sources for a report.
@@ -223,7 +235,7 @@ def make_evaluate_evidence_by_section(llm):
             "dropped_sources": dropped_dicts,
             "coverage_gaps": result.coverage_gaps,
         }
-        
+        logger.debug("LLM evaluation completed for section '%s'. Kept sources count: %d. Dropped sources count: %d. Coverage gaps identified: %d", section_title, len(result.kept_sources), len(dropped_dicts), len(result.coverage_gaps))
         return {
             "validated_sources": validated_sources,
             "status": "Evaluated quality of sources."
