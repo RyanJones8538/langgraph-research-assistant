@@ -189,3 +189,6 @@ def initialize_research_state(state):
         "validated_sources": validated_sources,
         "status": "Initialized Research Subgraph."
     }
+
+# Module-level instance for LangGraph Studio registration.
+graph = build_research_graph()

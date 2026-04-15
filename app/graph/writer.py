@@ -171,3 +171,6 @@ def initialize_writer_state(state):
         "writing_complete": writing_state_init,
         "status": "Initialized Writer Subgraph."
     }
+
+# Module-level instance for LangGraph Studio registration.
+graph = build_writer_graph()

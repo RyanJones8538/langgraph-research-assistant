@@ -1,9 +1,11 @@
 {
   "dependencies": [
     "."
-],
+  ],
   "graphs": {
-    "research_assistant_local": "./app/graph/builder.py:graph"
+    "research_assistant": "./app/graph/builder.py:graph",
+    "research_subgraph": "./app/graph/research.py:graph",
+    "writer_subgraph": "./app/graph/writer.py:graph"
   },
   "env": ".env"
 }

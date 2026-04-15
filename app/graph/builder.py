@@ -156,3 +156,8 @@ def build_graph(checkpointer):
     graph = builder.compile(checkpointer=checkpointer)
 
     return graph
+
+# Module-level instance for LangGraph Studio (langgraph dev).
+# No checkpointer is passed — the LangGraph API platform manages persistence itself.
+# The production Postgres checkpointer is wired in at runtime via build_graph().
+graph = build_graph(None)
