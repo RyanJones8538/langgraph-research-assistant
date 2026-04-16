@@ -44,6 +44,20 @@ def make_write_report_by_section(llm):
 def run_llm_writer(section_name: str, topic: str, outline_object: dict[str, list[str]],
                    section_questions: list[str], validated_sources: dict[str, dict],
                    section_draft: str, writing_feedback: dict, llm) -> str:
+    """
+    Runs the LLM writer to generate a draft for a section based on the topic, outline, section-specific questions, and validated research sources.
+    Args:
+    section_name: The name of the section being written.
+    topic: The overall research topic.
+    outline_object: The outline of the report, containing sections and subsections.
+    section_questions: A list of questions specific to the section.
+    validated_sources: A dictionary containing the validated research sources for the section.
+    section_draft: The current draft for the section, which may be empty if this is the first writing iteration, or may contain the previous draft if this is a subsequent writing iteration.
+    writing_feedback: The feedback received from the editor on the previous draft for this section, which may be empty if this is the first writing iteration, or may contain feedback if this is a subsequent writing iteration.
+    llm: The language model to use for writing the report.
+    Returns:
+    The generated draft for the section.
+    """
     model = llm()
     valid_sources = validated_sources.get("kept_sources", [])
 

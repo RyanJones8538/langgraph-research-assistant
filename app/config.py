@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from app.models.classes import SectionEvidenceResult, SectionQuestions, WritingSectionFeedback
+from pydantic_settings import BaseSettings
 
 load_dotenv()
 
@@ -30,7 +31,7 @@ if not DATABASE_URL:
         )
     DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-DEBUG_MODE = os.getenv("DEBUG_MODE", "true").lower() == "false"
+DEBUG_MODE = os.getenv("DEBUG_MODE", "false").lower() == "true"
 MAX_SECTIONS = int(os.getenv("MAX_SECTIONS", "2"))
 MAX_SUBSECTIONS_PER_SECTION = int(os.getenv("MAX_SUBSECTIONS_PER_SECTION", "2"))
 MAX_QUESTIONS_PER_SECTION = int(os.getenv("MAX_QUESTIONS_PER_SECTION", "2"))
@@ -42,16 +43,27 @@ NUM_WRITING_ITERATIONS = int(os.getenv("NUM_WRITING_ITERATIONS", "3"))
 MODEL_CHOICE = os.getenv("MODEL_CHOICE", "gpt-4o-mini")
 
 def get_llm() -> ChatOpenAI:
+    """Factory function to create the base LLM for the Research Assistant, which can then be extended with structured output parsing and retry logic as needed for different nodes."""
     return ChatOpenAI(
         model=MODEL_CHOICE,
         temperature=0,
     )
 
 def question_llm():
-    return get_llm().with_structured_output(SectionQuestions)
+    """Factory function to create the LLM for generating questions, which includes structured output parsing and retry logic."""
+    return (get_llm()
+    .with_structured_output(SectionQuestions)
+    .with_retry(stop_after_attempt=3)
+    )
 
 def validation_llm():
-    return get_llm().with_structured_output(SectionEvidenceResult)
+    """Factory function to create the LLM for validating evidence, which includes structured output parsing and retry logic."""
+    return (get_llm()
+            .with_structured_output(SectionEvidenceResult)
+            .with_retry(stop_after_attempt=3))
 
 def editor_llm():
-    return get_llm().with_structured_output(WritingSectionFeedback)
+    """Factory function to create the LLM for editing section drafts, which includes structured output parsing and retry logic."""
+    return (get_llm()
+            .with_structured_output(WritingSectionFeedback)
+            .with_retry(stop_after_attempt=3))

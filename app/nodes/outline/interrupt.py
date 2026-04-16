@@ -6,6 +6,11 @@ from app.state.run_state import update_run_state
 logger = logging.getLogger(__name__)
 
 def make_request_outline_review(state):
+    """
+    Factory function to create the request_outline_review node, which interrupts execution after outline generation to request user review and feedback on the generated outline.
+    Returns:
+        The request_outline_review node.
+    """
     def request_outline_review(state):
         """
         Interrupts execution after outline generation so the UI can display the outline

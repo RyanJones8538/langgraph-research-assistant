@@ -9,6 +9,7 @@ The writer subgraph generates a proposed report and sends it to an editor, who e
 If any sections are found insufficient, they are sent back to the writer node. This process is repeated thrice at most, to prevent infinite loops.
  These exist because both contain domain-specific variables that
 are useless elsewhere. A human-in-the-loop interrupt at the outlining phase allows the user more freedom to choose the final contents of the report.
+I've included a SQL table to store all GraphState data. At this point, it's unnecessary, but I want to keep the option available for future expansion.
 
 To run, run the docker compose up --build in the langgraph-research-assistant folder. The app will appear on localhost:3000.
 

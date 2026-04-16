@@ -11,6 +11,9 @@ from app.state.run_state import update_run_state
 
 
 def dispatch_section_questions(state: ResearchState):
+    """
+    Dispatches tasks to generate questions for each section in the research outline.
+    """
     outline = state["outline_object"]
     targets = []
 
@@ -39,6 +42,9 @@ def sync_after_questions(state: ResearchState):
     return {}
 
 def dispatch_search_sources(state: ResearchState):
+    """
+    Dispatches tasks to search for sources for each section that is not yet complete, based on the questions generated for that section.
+    """
     section_questions = state["section_questions"]
     research_complete_by_section = state["research_complete_by_section"]
     research_iteration = state.get("research_iteration", 0)
@@ -52,7 +58,7 @@ def dispatch_search_sources(state: ResearchState):
                 "research_iteration": research_iteration,
                 "section_title": section_title,
                 "questions": questions,
-                "validated_sources": validated_sources.get(section_title, {}),
+                "prior_coverage": validated_sources.get(section_title, {}),
                 "research_complete": research_complete_by_section.get(section_title, False),
             }))
     return targets
@@ -67,6 +73,9 @@ def sync_after_search(state: ResearchState):
     return {}
 
 def dispatch_evaluate_sources(state: ResearchState):
+    """
+    Dispatches tasks to evaluate sources for each section based on the candidate sources found for that section.
+    """
     research_iteration = state.get("research_iteration", 0)
     request_id = state.get("request_id", "")
     topic = state.get("topic", "")
@@ -104,7 +113,7 @@ def route_research(state):
                 "request_id": state["request_id"],
                 "section_title": section_title,
                 "questions": state["section_questions"].get(section_title, []),
-                "validated_sources": state["validated_sources"].get(section_title, {}),
+                "prior_coverage": state["validated_sources"].get(section_title, {}),
                 "research_complete": state["research_complete_by_section"].get(section_title, False),
                 "research_iteration": state["research_iteration"],
             }))

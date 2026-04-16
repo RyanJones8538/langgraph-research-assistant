@@ -6,6 +6,11 @@ from app.state.run_state import update_run_state
 logger = logging.getLogger(__name__)
 
 def make_check_writer_complete():
+    """
+    Factory function to create the check_writer_complete node, which checks if the writing is complete after each editing iteration and updates the run state accordingly.
+    Returns:
+        The check_writer_complete node.
+    """
     def write_final_report(outline_object: dict[str, list[str]], section_drafts: dict[str, str]) -> dict:
         """
         Writes the final report based on the section drafts and the outline object.
@@ -28,6 +33,13 @@ def make_check_writer_complete():
             })
         return {"sections": sections}
     def check_writer_complete(state):
+        """
+        Checks if the writing is complete after each editing iteration and updates the run state accordingly.
+        Args:            
+            state: The current state of the graph.
+        Returns:            
+            Whether the writing is complete, the current iteration of writing, and the final report if writing is complete.
+        """
         writing_complete_by_section = state.get("writing_complete_by_section", {})
         outline_object = state.get("outline_object", {})
         writing_iteration = state.get("writing_iteration", 0)

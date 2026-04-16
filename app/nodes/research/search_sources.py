@@ -6,7 +6,8 @@ from urllib.parse import urlparse
 from langgraph.graph import START, END, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 from langchain_tavily import TavilySearch
-from langchain_core.messages import SystemMessage, HumanMessage, add_messages
+from langchain_core.messages import SystemMessage, HumanMessage
+from langgraph.graph.message import add_messages
 from typing import Annotated, TypedDict
 
 logger = logging.getLogger(__name__)
@@ -16,12 +17,18 @@ class SearchAgentState(TypedDict):
     section_title: str
     questions: list[str]
     research_iteration: int
-    validated_sources: dict
+    prior_coverage: dict        # section-scoped; renamed to avoid colliding with ResearchState.validated_sources on subgraph output propagation
     messages: Annotated[list, add_messages]   # add_messages is the reducer for tool loops
     candidate_sources: dict                   # output, same key as today
 
 
 def make_research_agent(llm, tools):
+    """ 
+    Factory function to create the research agent node, which uses an LLM with tool use to search for sources based on the generated questions for each section of the outline.
+    Args:
+        llm: The language model to use for the research agent.
+        tools: The tools that the research agent can use to search for sources (e.g. Tavily).
+    """
     llm_with_tools = llm().bind_tools(tools)
     def research_agent(state: SearchAgentState):
         messages = state.get("messages", [])
@@ -31,12 +38,12 @@ def make_research_agent(llm, tools):
             section_title = state["section_title"]
             questions = state["questions"]
             research_iteration = state.get("research_iteration", 0)
-            validated_sources = state.get("validated_sources", {})
+            prior_coverage = state.get("prior_coverage", {})
 
             if research_iteration == 0:
                 task = "Questions to research:\n" + "\n".join(f"- {q}" for q in questions)
             else:
-                gaps = validated_sources.get("coverage_gaps", [])
+                gaps = prior_coverage.get("coverage_gaps", [])
                 task = "Coverage gaps to fill:\n" + "\n".join(f"- {g}" for g in gaps)
 
             messages = [
@@ -111,6 +118,13 @@ def extract_sources(state: SearchAgentState):
 
 
 def build_search_agent_graph(llm):
+    """
+    Builds the search agent subgraph for the Research Assistant, which uses an LLM with tool use to search for sources based on the generated questions for each section of the outline.
+    Args:
+        llm: The language model to use for the research agent.
+    Returns:
+        The search agent subgraph.
+    """
     tavily = TavilySearch(max_results=5)
     tool_node = ToolNode([tavily])
 

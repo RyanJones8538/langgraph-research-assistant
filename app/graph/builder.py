@@ -11,6 +11,7 @@ from app.nodes.outline.outline import make_generate_outline
 from app.nodes.outline.parse_review import make_parse_review
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 from app.config import DATABASE_URL, get_llm
 from app.state.graph_state import OutlineState
 
@@ -116,7 +117,7 @@ def route_review(state):
     else:
         return "invalid_review"
 
-def build_graph(checkpointer):
+def build_graph(checkpointer) -> CompiledStateGraph:
     """
     Builds main graph for Research Assistant.
     Returns:
