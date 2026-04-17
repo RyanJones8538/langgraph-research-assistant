@@ -17,6 +17,7 @@ def mock_db_writes():
         patch("app.nodes.outline.outline.update_run_state"),
         patch("app.nodes.outline.condense_topic.update_run_state"),
         patch("app.nodes.outline.interrupt.update_run_state"),
+        patch("app.nodes.outline.parse_review.update_run_state"),
         patch("app.nodes.research.identify_gaps.update_run_state"),
         patch("app.nodes.writer.check_writer_complete.update_run_state"),
         patch("app.nodes.research.identify_gaps.NUM_RESEARCH_ITERATIONS", 1),

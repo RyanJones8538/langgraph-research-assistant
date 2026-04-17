@@ -16,55 +16,65 @@ def _mock_llm_returning(value):
 def _unused_llm():
     return {"review_action": "llm response placeholder"}
 
-
-def test_parse_review_accepts_plain_approve_keyword():
+@patch("app.nodes.outline.parse_review.update_run_state")
+def test_parse_review_accepts_plain_approve_keyword(mock_update):
     parse_review = make_parse_review(lambda: _unused_llm)
     state = {"review_comment": "approve", "request_id": "req-1"}
 
     result = parse_review(state)
 
-    assert result == {"review_action": "approve"}
+    assert result == {"review_action": "approve", "status": "Evaluated user comment."}
+    mock_update.assert_called_once()
 
-def test_parse_review_accepts_plain_cancel_keyword():
+@patch("app.nodes.outline.parse_review.update_run_state")
+def test_parse_review_accepts_plain_cancel_keyword(mock_update):
     parse_review = make_parse_review(lambda: _unused_llm)
     state = {"review_comment": "cancel", "request_id": "req-1"}
 
     result = parse_review(state)
 
-    assert result == {"review_action": "cancel"}
+    assert result == {"review_action": "cancel", "status": "Evaluated user comment."}
+    mock_update.assert_called_once()
 
-def test_parse_review_accepts_plain_revise_keyword():
+@patch("app.nodes.outline.parse_review.update_run_state")
+def test_parse_review_accepts_plain_revise_keyword(mock_update):
     parse_review = make_parse_review(lambda: _unused_llm)
     state = {"review_comment": "revise", "request_id": "req-1"}
 
     result = parse_review(state)
 
-    assert result == {"review_action": "revise"}
+    assert result == {"review_action": "revise", "status": "Evaluated user comment."}
+    mock_update.assert_called_once()
 
-def test_parse_review_accepts_capitalized_accept_keyword():
+@patch("app.nodes.outline.parse_review.update_run_state")
+def test_parse_review_accepts_capitalized_accept_keyword(mock_update):
     parse_review = make_parse_review(lambda: _unused_llm)
     state = {"review_comment": "YES", "request_id": "req-1"}
 
     result = parse_review(state)
 
-    assert result == {"review_action": "approve"}
+    assert result == {"review_action": "approve", "status": "Evaluated user comment."}
+    mock_update.assert_called_once()
 
-
-def test_parse_review_accepts_structured_payload():
+@patch("app.nodes.outline.parse_review.update_run_state")
+def test_parse_review_accepts_structured_payload(mock_update):
     parse_review = make_parse_review(lambda: _unused_llm)
     state = {"review_comment": {"text": "  No  "}, "request_id": "req-2"}
 
     result = parse_review(state)
 
-    assert result == {"review_action": "revise"}
+    assert result == {"review_action": "revise", "status": "Evaluated user comment."}
+    mock_update.assert_called_once()
 
-def test_parse_review_handles_capitalized_structured_payload():
+@patch("app.nodes.outline.parse_review.update_run_state")
+def test_parse_review_handles_capitalized_structured_payload(mock_update):
     parse_review = make_parse_review(lambda: _unused_llm)
     state = {"review_comment": {"message": "  STOP  "}, "request_id": "req-3"}
 
     result = parse_review(state)
 
-    assert result == {"review_action": "cancel"}
+    assert result == {"review_action": "cancel", "status": "Evaluated user comment."}
+    mock_update.assert_called_once()
 
 @patch("app.nodes.outline.parse_review.update_run_state")
 def test_parse_review_handles_llm_input(mock_update):
@@ -73,7 +83,8 @@ def test_parse_review_handles_llm_input(mock_update):
 
     result = parse_review(state)
 
-    assert result["review_action"] == "llm response placeholder"
+    assert result == {"review_action": "llm response placeholder", "status": "Evaluated user comment."} 
+    mock_update.assert_called_once()
 
 @patch("app.nodes.outline.parse_review.update_run_state")
 def test_parse_review_handles_empty_input(mock_update):
@@ -82,7 +93,8 @@ def test_parse_review_handles_empty_input(mock_update):
 
     result = parse_review(state)
 
-    assert result["review_action"] == "llm response placeholder"
+    assert result == {"review_action": "llm response placeholder", "status": "Evaluated user comment."}
+    mock_update.assert_called_once()
 
 @patch("app.nodes.outline.parse_review.update_run_state")
 def test_parse_review_handles_none_comment(mock_update):
@@ -91,4 +103,5 @@ def test_parse_review_handles_none_comment(mock_update):
 
     result = parse_review(state)
 
-    assert result["review_action"] == "revise"
+    assert result == {"review_action": "revise", "status": "Evaluated user comment."}
+    mock_update.assert_called_once()

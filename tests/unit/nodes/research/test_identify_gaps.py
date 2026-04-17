@@ -25,6 +25,7 @@ def test_identify_gaps_all_sections_complete(mock_update):
     assert result["research_done"] == True
     assert result["research_complete_by_section"]["Section 1"] == True
     assert result["research_complete_by_section"]["Section 2"] == True
+    assert mock_update.call_count == 2
 
 @patch("app.nodes.research.identify_gaps.update_run_state")
 def test_identify_gaps_some_sections_incomplete(mock_update):
@@ -44,6 +45,7 @@ def test_identify_gaps_some_sections_incomplete(mock_update):
     assert result["research_done"] == False
     assert result["research_complete_by_section"]["Section 1"] == True
     assert result["research_complete_by_section"]["Section 2"] == False
+    assert mock_update.call_count == 2
 
 @patch("app.nodes.research.identify_gaps.update_run_state")
 def test_identify_gaps_max_iterations_reached(mock_update):
@@ -63,6 +65,7 @@ def test_identify_gaps_max_iterations_reached(mock_update):
     assert result["research_done"] == True
     assert result["research_complete_by_section"]["Section 1"] == False
     assert result["research_complete_by_section"]["Section 2"] == False
+    assert mock_update.call_count == 2
 
 @patch("app.nodes.research.identify_gaps.update_run_state")
 def test_identify_gaps_skips_already_complete_sections(mock_update):
@@ -86,3 +89,4 @@ def test_identify_gaps_skips_already_complete_sections(mock_update):
     assert result["research_done"] == True
     assert result["research_complete_by_section"]["Section A"] == True   # unchanged
     assert result["research_complete_by_section"]["Section B"] == True   # newly marked complete
+    assert mock_update.call_count == 2
