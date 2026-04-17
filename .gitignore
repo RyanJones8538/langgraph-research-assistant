@@ -47,6 +47,10 @@ Thumbs.db
 .langgraph_api/
 .langsmith/
 
+# --- Traces (raw exports) ---
+traces/
+!traces/examples/
+
 # --- React / Node ---
 node_modules/
 dist/

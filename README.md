@@ -31,6 +31,16 @@ State reducers are defined per-field on `ResearchState` and `WriterState` to han
 - **PostgreSQL** — run state persistence
 - **Docker Compose** — local deployment
 
+## Example traces
+
+Live LangSmith traces from three representative runs:
+
+- [Benjamin Franklin inventions](https://smith.langchain.com/public/fa0001f0-2990-4529-8fe0-a87b9ab59d73/r) — happy path: outline approved on first pass, research and writing complete across all sections
+- [Austin Powers character analysis](https://smith.langchain.com/public/9777e07b-69d1-4f37-a15a-9e1eb2e7e4ed/r) — outline revision cycle: user requests three successive revisions before approving, demonstrating the human-in-the-loop interrupt and re-route
+- [Napoleon Bonaparte biography](https://smith.langchain.com/public/10ef0299-10b8-4e72-b6fa-5fa8b861eabf/r) — large outline (30 sections) with research and writing iteration caps reached; 29/30 sections written before the writing iteration limit was hit
+
+Raw JSON exports are in [`traces/examples/`](traces/examples/).
+
 ## Running the app
 
 ```bash
