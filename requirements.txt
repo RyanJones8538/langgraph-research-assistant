@@ -6,6 +6,7 @@ langchain
 langchain-openai
 langchain-tavily
 psycopg[binary]
+pydantic-settings
 python-dotenv
 openai
 uvicorn

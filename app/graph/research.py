@@ -56,6 +56,7 @@ def dispatch_search_sources(state: ResearchState):
             targets.append(Send("search_sources_by_section", {
                 "request_id": state["request_id"],
                 "research_iteration": research_iteration,
+                "search_count": 0,
                 "section_title": section_title,
                 "questions": questions,
                 "prior_coverage": validated_sources.get(section_title, {}),

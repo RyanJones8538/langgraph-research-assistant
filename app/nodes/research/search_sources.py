@@ -7,19 +7,36 @@ from langgraph.graph import START, END, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 from langchain_tavily import TavilySearch
 from langchain_core.messages import SystemMessage, HumanMessage
-from langgraph.graph.message import add_messages
-from typing import Annotated, TypedDict
+
+from app.config import MAX_LLM_SEARCH_LOOPS, MAX_SOURCE_CONTENT_CHARS
+from app.state.graph_state import SearchAgentOutput, SearchAgentState
 
 logger = logging.getLogger(__name__)
 
-# A local state just for this subgraph — the outer ResearchState doesn't need messages
-class SearchAgentState(TypedDict):
-    section_title: str
-    questions: list[str]
-    research_iteration: int
-    prior_coverage: dict        # section-scoped; renamed to avoid colliding with ResearchState.validated_sources on subgraph output propagation
-    messages: Annotated[list, add_messages]   # add_messages is the reducer for tool loops
-    candidate_sources: dict                   # output, same key as today
+
+def _trim_tool_messages(messages):
+    """
+    Return a copy of messages where each ToolMessage's Tavily results are
+    truncated to MAX_SOURCE_CONTENT_CHARS per result.
+
+    The LLM only needs titles and a snippet to decide whether it has enough
+    coverage — it doesn't need to re-read full page content.  extract_sources
+    reads from state directly, so it still receives untruncated results.
+    """
+    trimmed = []
+    for msg in messages:
+        if msg.type == "tool":
+            try:
+                payload = json.loads(msg.content)
+                for result in payload.get("results", []):
+                    content = result.get("content", "")
+                    if len(content) > MAX_SOURCE_CONTENT_CHARS:
+                        result["content"] = content[:MAX_SOURCE_CONTENT_CHARS] + "…"
+                msg = msg.model_copy(update={"content": json.dumps(payload)})
+            except (json.JSONDecodeError, AttributeError):
+                pass
+        trimmed.append(msg)
+    return trimmed
 
 
 def make_research_agent(llm, tools):
@@ -53,11 +70,33 @@ def make_research_agent(llm, tools):
                 HumanMessage(f"Section: {section_title}\n{task}")
             ]
 
-        response = llm_with_tools.invoke(messages)
+        response = llm_with_tools.invoke(_trim_tool_messages(messages))
         logger.debug("Research agent generated response: %s", response)
         return {"messages": [response]}   # add_messages reducer appends this
 
     return research_agent
+
+def route_search_sources(state):
+    """
+    Routes to either the tools node if the LLM is still calling tools, or to the extract_sources node if the LLM has stopped calling tools and research agent is done.
+    Args:
+        state: The current state of the graph.
+    Returns:
+        The next node to route to.
+    """
+    messages = state.get("messages", [])
+    # Find the last SystemMessage, which marks the start of the current run.
+    # Counting only ToolMessages after it avoids inflating the count with
+    # results from prior research_iteration cycles on the same thread.
+    last_system_idx = max((i for i, m in enumerate(messages) if m.type == "system"), default=-1)
+    tool_call_count = sum(1 for m in messages[last_system_idx + 1:] if m.type == "tool")
+    if tool_call_count >= MAX_LLM_SEARCH_LOOPS:   # safety check to prevent infinite loops in case the LLM doesn't stop calling tools
+        logger.warning("Search iteration limit reached for section '%s'. Routing to extract_sources.", state.get("section_title", ""))
+        return "extract_sources"
+    if tools_condition(state) == "tools":
+        return "tools"
+    else:
+        return "extract_sources"
 
 
 def extract_sources(state: SearchAgentState):
@@ -82,8 +121,8 @@ def extract_sources(state: SearchAgentState):
     query_map: dict[str, str] = {}
     for msg in state["messages"]:
         if hasattr(msg, "tool_calls"):
-            for tc in msg.tool_calls:
-                query_map[tc["id"]] = tc.get("args", {}).get("query", "")
+            for tool_call in msg.tool_calls:
+                query_map[tool_call["id"]] = tool_call.get("args", {}).get("query", "")
 
     for msg in state["messages"]:
         if msg.type == "tool":
@@ -114,7 +153,8 @@ def extract_sources(state: SearchAgentState):
         "questions": questions,
         "sources_by_question": sources_by_question,
         "all_sources": all_sources,
-    }}}
+        }},
+    }
 
 
 def build_search_agent_graph(llm):
@@ -125,19 +165,16 @@ def build_search_agent_graph(llm):
     Returns:
         The search agent subgraph.
     """
-    tavily = TavilySearch(max_results=5)
+    tavily = TavilySearch(max_results=3)
     tool_node = ToolNode([tavily])
 
-    builder = StateGraph(SearchAgentState)
+    builder = StateGraph(SearchAgentState, output_schema=SearchAgentOutput)
     builder.add_node("research_agent", make_research_agent(llm, [tavily]))
     builder.add_node("tools", tool_node)
     builder.add_node("extract_sources", extract_sources)   # replaces the loop cleanup code
 
     builder.add_edge(START, "research_agent")
-    builder.add_conditional_edges("research_agent", tools_condition, {
-        "tools": "tools",
-        END: "extract_sources"        # LLM stopped calling tools → extract results
-    })
+    builder.add_conditional_edges("research_agent", route_search_sources)
     builder.add_edge("tools", "research_agent")   # results feed back to LLM
     builder.add_edge("extract_sources", END)
 

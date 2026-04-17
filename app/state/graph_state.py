@@ -1,5 +1,7 @@
 from typing import Annotated, TypedDict
 
+from langgraph.graph import add_messages
+
 from app.models.classes import SectionResearchCandidates
 
 import operator
@@ -34,6 +36,25 @@ class ResearchState(TypedDict):
     research_complete_by_section: dict[str, bool]
     # Last value wins — parallel nodes may all write status simultaneously
     status: Annotated[str, lambda _, b: b]
+
+class SearchAgentState(TypedDict):
+    section_title: str
+    questions: list[str]
+    research_iteration: int
+    prior_coverage: dict        # section-scoped; renamed to avoid colliding with ResearchState.validated_sources on subgraph output propagation
+    messages: Annotated[list, add_messages]   # add_messages is the reducer for tool loops
+    candidate_sources: dict                   # output, same key as today
+
+class SearchAgentOutput(TypedDict):
+    """
+    Defines what the search agent subgraph exposes to its parent graph.
+    Only candidate_sources is propagated upward; internal fields like
+    section_title, messages, and questions stay private to the subgraph.
+    Without this, parallel subgraph instances would each try to write
+    section_title to ResearchState with no reducer, causing
+    INVALID_CONCURRENT_GRAPH_UPDATE.
+    """
+    candidate_sources: dict
 
 class WriterState(TypedDict):
     request_id: str
