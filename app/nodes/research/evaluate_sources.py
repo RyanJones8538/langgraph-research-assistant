@@ -54,7 +54,7 @@ def dedupe_sources(sources: list[SourceItem]) -> list[EvaluatedSource]:
             title=source.get("title", "").strip(),
             url=source.get("url", "").strip(),
             domain=source.get("domain", "").strip() or normalize_domain(source.get("url", "").strip()),
-            snippet=source.get("snippet", "").strip(),
+            snippet=source.get("content", "").strip(),
             relevance_score=0.0,
             reliability_score=0.0,
             keep=False,
@@ -196,6 +196,13 @@ def make_evaluate_evidence_by_section(llm):
 
         logger.info("Sources remaining for LLM evaluation for section '%s' after removing previously kept sources: %d", section_title, len(prelim_kept))
         # 3. LLM evaluation of remaining sources
+        # Pass only the fields the LLM needs. Passing full EvaluatedSource objects
+        # would show keep=False and relevance_score=0.0 on every entry, biasing the
+        # model toward dropping all candidates.
+        sources_for_prompt = [
+            {"title": s.title, "url": s.url, "domain": s.domain, "snippet": s.snippet}
+            for s in prelim_kept
+        ]
         prompt = f"""
             You are evaluating research sources for a report.
 
@@ -209,7 +216,7 @@ def make_evaluate_evidence_by_section(llm):
             {section_questions}
 
             Candidate sources:
-            {prelim_kept}
+            {sources_for_prompt}
 
             Evaluate the sources for:
             - relevance to this section

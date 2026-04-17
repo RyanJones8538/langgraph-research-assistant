@@ -15,6 +15,9 @@ const initialViewState = {
   streamingOutput: "",
   researchIteration: 0,
   writingIteration: 0,
+  totalSections: 0,
+  researchSectionsComplete: 0,
+  writingSectionsComplete: 0,
   statusHistory: [],
   loading: false,
   error: "",
@@ -59,6 +62,12 @@ export default function App() {
       status: viewState.status,
       research_iteration: viewState.researchIteration,
       writing_iteration: viewState.writingIteration,
+      research_sections_complete: viewState.totalSections > 0
+        ? `${viewState.researchSectionsComplete} / ${viewState.totalSections}`
+        : null,
+      writing_sections_complete: viewState.totalSections > 0
+        ? `${viewState.writingSectionsComplete} / ${viewState.totalSections}`
+        : null,
       status_history: viewState.statusHistory,
     }),
     [viewState]
@@ -93,6 +102,15 @@ export default function App() {
             ...previous,
             tokenChunks: appendTokenChunk(previous.tokenChunks, event.node, event.content),
           }));
+        } else if (event.type === "variables_update") {
+          setViewState((previous) => ({
+            ...previous,
+            researchIteration: event.research_iteration ?? previous.researchIteration,
+            writingIteration: event.writing_iteration ?? previous.writingIteration,
+            totalSections: event.total_sections ?? previous.totalSections,
+            researchSectionsComplete: event.research_sections_complete ?? previous.researchSectionsComplete,
+            writingSectionsComplete: event.writing_sections_complete ?? previous.writingSectionsComplete,
+          }));
         } else if (event.type === "result") {
           setViewState((previous) => ({
             ...previous,
@@ -102,6 +120,11 @@ export default function App() {
             statusHistory: event.status_history ?? previous.statusHistory,
             output: event.current_outline || event.final_report || previous.output,
             streamingOutput: JSON.stringify(event, null, 2),
+            researchIteration: event.research_iteration ?? previous.researchIteration,
+            writingIteration: event.writing_iteration ?? previous.writingIteration,
+            totalSections: event.total_sections ?? previous.totalSections,
+            researchSectionsComplete: event.research_sections_complete ?? previous.researchSectionsComplete,
+            writingSectionsComplete: event.writing_sections_complete ?? previous.writingSectionsComplete,
             runPhase: hasGraphInterrupt(event)
               ? "awaiting_review"
               : hasCompletedRun(event)
@@ -153,6 +176,15 @@ export default function App() {
             ...previous,
             tokenChunks: appendTokenChunk(previous.tokenChunks, event.node, event.content),
           }));
+        } else if (event.type === "variables_update") {
+          setViewState((previous) => ({
+            ...previous,
+            researchIteration: event.research_iteration ?? previous.researchIteration,
+            writingIteration: event.writing_iteration ?? previous.writingIteration,
+            totalSections: event.total_sections ?? previous.totalSections,
+            researchSectionsComplete: event.research_sections_complete ?? previous.researchSectionsComplete,
+            writingSectionsComplete: event.writing_sections_complete ?? previous.writingSectionsComplete,
+          }));
         } else if (event.type === "result") {
           setViewState((previous) => ({
             ...previous,
@@ -163,6 +195,9 @@ export default function App() {
             streamingOutput: JSON.stringify(event, null, 2),
             researchIteration: event.research_iteration ?? previous.researchIteration,
             writingIteration: event.writing_iteration ?? previous.writingIteration,
+            totalSections: event.total_sections ?? previous.totalSections,
+            researchSectionsComplete: event.research_sections_complete ?? previous.researchSectionsComplete,
+            writingSectionsComplete: event.writing_sections_complete ?? previous.writingSectionsComplete,
             runPhase: hasCompletedRun(event)
               ? "complete"
               : hasGraphInterrupt(event)

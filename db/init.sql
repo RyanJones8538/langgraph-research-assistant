@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS run_state (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     request_id TEXT UNIQUE,
-    thread_id TEXT UNIQUE,
+    thread_id TEXT,
     topic TEXT,
     status TEXT,
     last_completed_node TEXT,
@@ -16,14 +16,17 @@ CREATE TABLE IF NOT EXISTS run_state (
     final_report JSONB,
     validated_sources JSONB,
     candidate_sources JSONB,
+    total_sections INTEGER DEFAULT 0,
     research_iteration INTEGER DEFAULT 0,
     research_done BOOLEAN DEFAULT FALSE,
     research_complete_by_section JSONB,
+    research_sections_complete INTEGER DEFAULT 0,
     writing_iteration INTEGER DEFAULT 0,
     writing_draft JSONB,
     writing_feedback JSONB,
     writing_done BOOLEAN DEFAULT FALSE,
     writing_complete_by_section JSONB,
+    writing_sections_complete INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     last_updated_at TIMESTAMPTZ DEFAULT NOW()
 );

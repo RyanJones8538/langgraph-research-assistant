@@ -22,14 +22,13 @@ def make_identify_gaps():
             Iteration of research, whether research should continue, and which sections are complete.
         """
         evaluated_sources = state.get("validated_sources", {})
-        number_of_research_runs = state.get("research_iteration", 0)
+        research_iteration = state.get("research_iteration", 1)
         research_complete_by_section = state.get("research_complete_by_section", {})
         update_run_state(state.get("request_id", ), validated_sources=state.get("validated_sources", {}), last_completed_node="evaluate_sources", status="Evaluated quality of sources.")
-        
-        logger.info("Identifying gaps in research for iteration %d. Evaluated sources count: %d", number_of_research_runs, len(evaluated_sources))
-        
+
+        logger.info("Identifying gaps in research for iteration %d. Evaluated sources count: %d", research_iteration, len(evaluated_sources))
+
         research_done = True
-        number_of_research_runs+=1
 
         for section in evaluated_sources:
             if research_complete_by_section[section]:
@@ -39,17 +38,26 @@ def make_identify_gaps():
                 research_complete_by_section[section] = True
                 continue
             research_done = False
-        if number_of_research_runs >= NUM_RESEARCH_ITERATIONS:
+        if research_iteration >= NUM_RESEARCH_ITERATIONS:
             research_done = True
 
-        logger.debug("Gaps identified for iteration %d. Research complete for sections: %s. Should research continue: %s", number_of_research_runs, [section for section, complete in research_complete_by_section.items() if complete], research_done)
-        
-        update_run_state(state.get("request_id", ), research_iteration=number_of_research_runs, research_done=research_done, 
-                         research_complete_by_section=research_complete_by_section, last_completed_node="identify_gaps", status="Identified gaps in research sources.")
+        # Only increment if another iteration will actually run — avoids showing one
+        # run more than was executed when research completes naturally.
+        if not research_done:
+            research_iteration += 1
+
+        research_sections_complete = sum(1 for v in research_complete_by_section.values() if v)
+
+        logger.debug("Gaps identified for iteration %d. Research complete for sections: %s. Should research continue: %s", research_iteration, [section for section, complete in research_complete_by_section.items() if complete], research_done)
+
+        update_run_state(state.get("request_id", ), research_iteration=research_iteration, research_done=research_done,
+                         research_complete_by_section=research_complete_by_section, research_sections_complete=research_sections_complete,
+                         last_completed_node="identify_gaps", status="Identified gaps in research sources.")
         return {
-            "research_iteration": number_of_research_runs,
+            "research_iteration": research_iteration,
             "research_done": research_done,
             "research_complete_by_section": research_complete_by_section,
+            "research_sections_complete": research_sections_complete,
             "status": "Identified gaps in research sources."
         }
     return identify_gaps

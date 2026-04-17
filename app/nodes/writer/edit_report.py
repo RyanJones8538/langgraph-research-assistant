@@ -70,8 +70,9 @@ def run_llm_editor(section_name: str, section_questions: list[str], section_draf
         Here is the current draft for this section that you should edit:
         {section_draft}
 
-        Your output should include a detailed list of specific edits that should be made to the draft to improve it and a final evaluation of pass or fail. If the draft is good enough in its current state,
-        simply write "No edits needed. Pass." If the draft is very poor and needs to be completely rewritten, write "Draft needs to be completely rewritten. Fail."
+        Provide specific feedback in the `feedback` field listing what to improve or add.
+        Set `pass_or_fail` to true if the draft adequately addresses the section questions with reasonable quality — it does not need to be perfect.
+        Set `pass_or_fail` to false only if the draft has significant factual gaps, fails to address the core questions, or is too thin to be useful.
 
         """
     if DEBUG_MODE:

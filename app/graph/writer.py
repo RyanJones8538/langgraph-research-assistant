@@ -158,17 +158,22 @@ def initialize_writer_state(state):
     writing_state_init: dict[str, bool] = {}
     outline_object = state.get("outline_object")
     request_id = state.get("request_id", "")
+    total_sections = 0
     for section_title, subsections in outline_object.items():
         writing_state_init[section_title] = False
+        total_sections += 1 + len(subsections)
         for subsection in subsections:
             writing_state_init[subsection] = False
 
-    update_run_state(request_id, writing_iteration=0, writing_done=False, writing_complete_by_section=writing_state_init,
+    update_run_state(request_id, writing_iteration=1, writing_done=False, writing_complete_by_section=writing_state_init,
+                     total_sections=total_sections, writing_sections_complete=0,
                      last_completed_node = "initialize_writer", status = "Initialized Writer Subgraph.")
     return {
-        "writing_iteration": 0,
+        "writing_iteration": 1,
         "writing_done": False,
         "writing_complete_by_section": writing_state_init,
+        "total_sections": total_sections,
+        "writing_sections_complete": 0,
         "status": "Initialized Writer Subgraph."
     }
 

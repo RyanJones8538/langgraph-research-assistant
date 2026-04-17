@@ -50,13 +50,25 @@ def make_parse_review(llm):
 
         # Prefer deterministic parsing to avoid LLM misclassification loops.
         if normalized_comment in {"approve", "approved", "yes", "y", "looks good", "good"}:
-            return {"review_action": "approve"}
+            update_run_state(request_id, review_action="approve", last_completed_node="parse_review", status="Evaluated user comment.")
+            return {
+                "review_action": "approve",
+                "status": "Evaluated user comment.",
+                }
 
         if normalized_comment in {"cancel", "stop", "abort", "exit"}:
-            return {"review_action": "cancel"}
+            update_run_state(request_id, review_action="cancel", last_completed_node="parse_review", status="Evaluated user comment.")
+            return {
+                "review_action": "cancel",
+                "status": "Evaluated user comment.",
+                }
 
         if normalized_comment in {"revise", "change", "edit", "update", "no", "n"}:
-            return {"review_action": "revise"}
+            update_run_state(request_id, review_action="revise", last_completed_node="parse_review", status="Evaluated user comment.") 
+            return {
+                "review_action": "revise",
+                "status": "Evaluated user comment.",
+                }
         
         logger.info("Review comment did not match any keywords, invoking LLM to parse review action.")
 

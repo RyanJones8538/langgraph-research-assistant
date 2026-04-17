@@ -49,6 +49,14 @@ def _readable_error(exc: Exception) -> str:
         return body["message"]
     return str(exc)
 
+_TRACKED_VARIABLES = (
+    "research_iteration",
+    "writing_iteration",
+    "total_sections",
+    "research_sections_complete",
+    "writing_sections_complete",
+)
+
 def stream_graph_events(graph, graph_input, config):
     """
     Sync generator that yields SSE-formatted strings from graph execution.
@@ -57,14 +65,16 @@ def stream_graph_events(graph, graph_input, config):
     writer subgraphs are surfaced in real time, not just when the subgraph
     finishes and hands control back to the root graph.
 
-    Emits three event types:
-      {"type": "status_update", "status": "..."}  — one per distinct status value
-      {"type": "token", "node": "...", "content": "..."}  — one per LLM token
-      {"type": "result", ...full OutlineState}     — final event with complete state
-      {"type": "error", "message": "..."}          — emitted if graph execution fails
+    Emits four event types:
+      {"type": "status_update", "status": "..."}           — one per distinct status value
+      {"type": "variables_update", ...variable fields}     — emitted whenever tracked variable fields change in any subgraph
+      {"type": "token", "node": "...", "content": "..."}   — one per LLM token
+      {"type": "result", ...full OutlineState}             — final event with complete state
+      {"type": "error", "message": "..."}                  — emitted if graph execution fails
     """
     status_history: list[str] = []
     last_root_state: dict = {}
+    last_emitted_variables: dict = {}
 
     try:
         # With stream_mode as a list and subgraphs=True, each item is a flat 3-tuple:
@@ -80,6 +90,17 @@ def stream_graph_events(graph, graph_input, config):
                     if not status_history or status_history[-1] != status:
                         status_history.append(status)
                         yield f"data: {json.dumps({'type': 'status_update', 'status': status})}\n\n"
+                # Emit a variables_update event whenever any tracked field changes,
+                # regardless of subgraph namespace. This keeps the UI display current
+                # during long-running research and writer iterations.
+                changed = {
+                    k: data[k]
+                    for k in _TRACKED_VARIABLES
+                    if k in data and data[k] != last_emitted_variables.get(k)
+                }
+                if changed:
+                    last_emitted_variables.update(changed)
+                    yield f"data: {json.dumps({'type': 'variables_update', **changed})}\n\n"
 
             elif mode == "messages":
                 # data is (AIMessageChunk, metadata_dict). metadata contains the
@@ -152,6 +173,11 @@ def start_run_stream(payload: StartRunRequest, request: Request):
         "final_report": None,
         "validated_sources": {},
         "status": "Initializing Research Assistant",
+        "total_sections": 0,
+        "research_iteration": 0,
+        "writing_iteration": 0,
+        "research_sections_complete": 0,
+        "writing_sections_complete": 0,
     }
     config = {
         "metadata": {"request_id": request_id},
@@ -221,6 +247,11 @@ def start_run(payload: StartRunRequest, request: Request):
         "final_report": None,
         "validated_sources": {},
         "status": "Initializing Research Assistant",
+        "total_sections": 0,
+        "research_iteration": 0,
+        "writing_iteration": 0,
+        "research_sections_complete": 0,
+        "writing_sections_complete": 0,
     }
     return run_graph_with_status_history(
         request.app.state.graph,

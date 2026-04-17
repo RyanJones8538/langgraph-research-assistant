@@ -6,7 +6,7 @@ from uuid_utils import uuid4
 from app.graph.research import build_research_graph
 from app.graph.writer import build_writer_graph
 from app.nodes.outline.condense_topic import make_condense_topic
-from app.nodes.outline.interrupt import make_request_outline_review
+from app.nodes.outline.interrupt import request_outline_review
 from app.nodes.outline.outline import make_generate_outline
 from app.nodes.outline.parse_review import make_parse_review
 from langchain_core.runnables import RunnableConfig
@@ -128,7 +128,7 @@ def build_graph(checkpointer) -> CompiledStateGraph:
     # Generate Graph Nodes
     builder.add_node("initialize", initialize_run)
     builder.add_node("generate_outline", make_generate_outline(get_llm))
-    builder.add_node("request_outline_review", make_request_outline_review)
+    builder.add_node("request_outline_review", request_outline_review)
     builder.add_node("parse_review", make_parse_review(get_llm))
     builder.add_node("condense_topic", make_condense_topic(get_llm))
     builder.add_node("handle_invalid_review", handle_invalid_review)

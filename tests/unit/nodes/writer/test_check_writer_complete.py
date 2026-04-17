@@ -90,11 +90,14 @@ def test_check_writer_final_report_structure(mock_update):
 
 @patch("app.nodes.writer.check_writer_complete.update_run_state")
 def test_check_writer_complete_increments_iteration(mock_update):
+    # writing_iteration starts at 1 (set by initialize_writer_state).
+    # The max check is writing_iteration >= NUM_WRITING_ITERATIONS (3), so passing
+    # writing_iteration=3 triggers done without incrementing — final value stays 3.
     check_writer_complete = make_check_writer_complete()
     state = {
         "writing_complete_by_section": {"Section 1": False, "Section 2": False, "Subsection 1.1": False, "Subsection 2.1": False},
         "request_id": "req-5",
-        "writing_iteration": 2,
+        "writing_iteration": 3,
         "outline_object": {"Section 1": ["Subsection 1.1"], "Section 2": ["Subsection 2.1"]},
     }
 

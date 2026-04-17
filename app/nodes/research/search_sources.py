@@ -154,6 +154,7 @@ def extract_sources(state: SearchAgentState):
         "sources_by_question": sources_by_question,
         "all_sources": all_sources,
         }},
+        "status": "Searched for online sources of information"
     }
 
 

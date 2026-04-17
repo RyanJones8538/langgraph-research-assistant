@@ -175,6 +175,7 @@ def initialize_research_state(state):
     research_state_init: dict[str, bool] = {}
     outline_object = state.get("outline_object")
     validated_sources: dict[str, dict] = {}
+    total_sections = 0
     if outline_object:
         for section_title, subsections in outline_object.items():
             research_state_init[section_title] = False
@@ -183,6 +184,7 @@ def initialize_research_state(state):
                 "dropped_sources": [],
                 "coverage_gaps": [],
             }
+            total_sections += 1 + len(subsections)
             for subsection in subsections:
                 research_state_init[subsection] = False
                 validated_sources[subsection] = {
@@ -190,13 +192,16 @@ def initialize_research_state(state):
                     "dropped_sources": [],
                     "coverage_gaps": [],
                 }
-    update_run_state(state.get("request_id", ), research_iteration=0, research_done=False, research_complete_by_section=research_state_init, validated_sources=validated_sources,
+    update_run_state(state.get("request_id", ), research_iteration=1, research_done=False, research_complete_by_section=research_state_init, validated_sources=validated_sources,
+                     total_sections=total_sections, research_sections_complete=0,
                      status = "Initialized Research Subgraph.", last_completed_node = "initialize_research")
     return {
-        "research_iteration": 0,
+        "research_iteration": 1,
         "research_done": False,
         "research_complete_by_section": research_state_init,
         "validated_sources": validated_sources,
+        "total_sections": total_sections,
+        "research_sections_complete": 0,
         "status": "Initialized Research Subgraph."
     }
 

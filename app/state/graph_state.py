@@ -21,6 +21,11 @@ class OutlineState(TypedDict):
     validated_sources: dict[str, dict]
     final_report: dict | None
     status: str
+    total_sections: int
+    research_iteration: int
+    writing_iteration: int
+    research_sections_complete: int
+    writing_sections_complete: int
 
 class ResearchState(TypedDict):
     request_id: str
@@ -34,6 +39,8 @@ class ResearchState(TypedDict):
     research_iteration: int
     research_done: bool
     research_complete_by_section: dict[str, bool]
+    total_sections: int
+    research_sections_complete: int
     # Last value wins — parallel nodes may all write status simultaneously
     status: Annotated[str, lambda _, b: b]
 
@@ -44,6 +51,7 @@ class SearchAgentState(TypedDict):
     prior_coverage: dict        # section-scoped; renamed to avoid colliding with ResearchState.validated_sources on subgraph output propagation
     messages: Annotated[list, add_messages]   # add_messages is the reducer for tool loops
     candidate_sources: dict                   # output, same key as today
+    status: Annotated[str, lambda _, b: b]
 
 class SearchAgentOutput(TypedDict):
     """
@@ -55,6 +63,7 @@ class SearchAgentOutput(TypedDict):
     INVALID_CONCURRENT_GRAPH_UPDATE.
     """
     candidate_sources: dict
+    status: str
 
 class WriterState(TypedDict):
     request_id: str
@@ -70,4 +79,6 @@ class WriterState(TypedDict):
     writing_done: bool
     writing_complete_by_section: Annotated[dict[str, bool], operator.or_]
     final_report: dict | None
+    total_sections: int
+    writing_sections_complete: int
     status: Annotated[str, lambda _, b: b]
